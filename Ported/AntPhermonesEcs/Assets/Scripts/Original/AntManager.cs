@@ -46,9 +46,9 @@ public class AntManager : MonoBehaviour
     Matrix4x4[][] matrices;
     Vector4[][] antColors;
     MaterialPropertyBlock[] matProps;
-    Obstacle[] obstacles;
+    Obstacle_old[] obstacles;
     Matrix4x4[][] obstacleMatrices;
-    Obstacle[,][] obstacleBuckets;
+    Obstacle_old[,][] obstacleBuckets;
 
     Matrix4x4 resourceMatrix;
     Matrix4x4 colonyMatrix;
@@ -161,7 +161,7 @@ public class AntManager : MonoBehaviour
 
     void GenerateObstacles()
     {
-        List<Obstacle> output = new List<Obstacle>();
+        List<Obstacle_old> output = new List<Obstacle_old>();
         for (int i = 1; i <= obstacleRingCount; i++)
         {
             float ringRadius = (i / (obstacleRingCount + 1f)) * (mapSize * .5f);
@@ -175,7 +175,7 @@ public class AntManager : MonoBehaviour
                 if ((t * holeCount) % 1f < obstaclesPerRing)
                 {
                     float angle = (j + offset) / (float)maxCount * (2f * Mathf.PI);
-                    Obstacle obstacle = new Obstacle();
+                    Obstacle_old obstacle = new Obstacle_old();
                     obstacle.position = new Vector2(mapSize * .5f + Mathf.Cos(angle) * ringRadius, mapSize * .5f + Mathf.Sin(angle) * ringRadius);
                     obstacle.radius = obstacleRadius;
                     output.Add(obstacle);
@@ -196,13 +196,13 @@ public class AntManager : MonoBehaviour
 
         obstacles = output.ToArray();
 
-        List<Obstacle>[,] tempObstacleBuckets = new List<Obstacle>[bucketResolution, bucketResolution];
+        List<Obstacle_old>[,] tempObstacleBuckets = new List<Obstacle_old>[bucketResolution, bucketResolution];
 
         for (int x = 0; x < bucketResolution; x++)
         {
             for (int y = 0; y < bucketResolution; y++)
             {
-                tempObstacleBuckets[x, y] = new List<Obstacle>();
+                tempObstacleBuckets[x, y] = new List<Obstacle_old>();
             }
         }
 
@@ -227,7 +227,7 @@ public class AntManager : MonoBehaviour
             }
         }
 
-        obstacleBuckets = new Obstacle[bucketResolution, bucketResolution][];
+        obstacleBuckets = new Obstacle_old[bucketResolution, bucketResolution][];
         for (int x = 0; x < bucketResolution; x++)
         {
             for (int y = 0; y < bucketResolution; y++)
@@ -237,12 +237,12 @@ public class AntManager : MonoBehaviour
         }
     }
 
-    Obstacle[] emptyBucket = new Obstacle[0];
-    Obstacle[] GetObstacleBucket(Vector2 pos)
+    Obstacle_old[] emptyBucket = new Obstacle_old[0];
+    Obstacle_old[] GetObstacleBucket(Vector2 pos)
     {
         return GetObstacleBucket(pos.x, pos.y);
     }
-    Obstacle[] GetObstacleBucket(float posX, float posY)
+    Obstacle_old[] GetObstacleBucket(float posX, float posY)
     {
         int x = (int)(posX / mapSize * bucketResolution);
         int y = (int)(posY / mapSize * bucketResolution);
@@ -392,10 +392,10 @@ public class AntManager : MonoBehaviour
 
             float dx, dy, dist;
 
-            Obstacle[] nearbyObstacles = GetObstacleBucket(ant.position);
+            Obstacle_old[] nearbyObstacles = GetObstacleBucket(ant.position);
             for (int j = 0; j < nearbyObstacles.Length; j++)
             {
-                Obstacle obstacle = nearbyObstacles[j];
+                Obstacle_old obstacle = nearbyObstacles[j];
                 dx = ant.position.x - obstacle.position.x;
                 dy = ant.position.y - obstacle.position.y;
                 float sqrDist = dx * dx + dy * dy;
