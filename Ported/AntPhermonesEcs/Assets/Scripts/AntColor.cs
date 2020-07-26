@@ -7,8 +7,12 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
+using Unity.Burst;
+using Unity.Jobs;
 
-public class AntColor : ComponentSystem
+[UpdateInGroup(typeof(PresentationSystemGroup))]
+[UpdateBefore(typeof(AntRendering))]
+public class AntColor : JobComponentSystem
 {
     AntSettings m_settings;
 
@@ -18,16 +22,19 @@ public class AntColor : ComponentSystem
         m_settings = AntSettingsManager.Current;
     }
 
-    protected override void OnUpdate()
+    protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
-        Entities.WithAllReadOnly<AntTag, HoldingResourceTag>().ForEach((ref Brightness brightness, ref ColorData color) =>
-        {
-            color.Value += ((float4)(Vector4)m_settings.carryColor * brightness.Value - color.Value) * 0.05f;
-        });
+        var carryColor = (float4)(Vector4)m_settings.carryColor;
+        var searchColor = (float4)(Vector4)m_settings.searchColor;
 
-        Entities.WithAllReadOnly<AntTag>().WithNone<HoldingResourceTag>().ForEach((ref Brightness brightness, ref ColorData color) =>
+        var carry = Entities.WithAll<AntTag, HoldingResourceTag>().ForEach((ref Brightness brightness, ref ColorData color) =>
         {
-            color.Value += ((float4)(Vector4)m_settings.searchColor * brightness.Value - color.Value) * 0.05f;
-        });
+            color.Value += (carryColor * brightness.Value - color.Value) * 0.05f;
+        }).Schedule(inputDeps);
+
+        return Entities.WithAll<AntTag>().WithNone<HoldingResourceTag>().ForEach((ref Brightness brightness, ref ColorData color) =>
+        {
+            color.Value += (searchColor * brightness.Value - color.Value) * 0.05f;
+        }).Schedule(carry);
     }
 }

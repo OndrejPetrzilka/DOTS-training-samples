@@ -20,6 +20,7 @@ public class SimulationSpeedInput : ComponentSystem
             if (Input.GetKeyDown(KeyCode.Alpha0 + i))
             {
                 UnityEngine.Time.timeScale = i;
+                //UnityEngine.Time.fixedDeltaTime = i * 1 / 50.0f;
             }
         }
     }

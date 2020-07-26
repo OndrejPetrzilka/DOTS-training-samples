@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Unity.Entities;
 using UnityEngine;
 
+[UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class AntResourceTarget : ComponentSystem
 {
     struct HasResourceTargetTag : ISystemStateComponentData
