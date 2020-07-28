@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
 using Unity.Mathematics;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -13,103 +14,25 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class AntSteering : ComponentSystem
 {
-    struct Obstacle
-    {
-        public float2 Position;
-        public float Radius;
-    }
-
     AntSettings m_settings;
-
-    Color[] pheromones;
-    Texture2D pheromoneTexture;
-    Material myPheromoneMaterial;
-    Obstacle[,][] obstacleBuckets;
+    ObstacleCache m_cache;
 
     protected override void OnCreate()
     {
         base.OnCreate();
+        m_cache = World.GetExistingSystem<ObstacleCache>();
         m_settings = AntSettingsManager.Current;
-
-        pheromones = new Color[m_settings.mapSize * m_settings.mapSize];
-
-        pheromoneTexture = new Texture2D(m_settings.mapSize, m_settings.mapSize);
-        pheromoneTexture.wrapMode = TextureWrapMode.Mirror;
-        myPheromoneMaterial = new Material(m_settings.basePheromoneMaterial);
-        myPheromoneMaterial.mainTexture = pheromoneTexture;
-        m_settings.pheromoneRenderer.sharedMaterial = myPheromoneMaterial;
-    }
-
-    protected override void OnDestroy()
-    {
-        obstacleBuckets = null;
-        Object.DestroyImmediate(pheromoneTexture);
-        base.OnDestroy();
-    }
-
-    void CreateBuckets(NativeArray<Position> obstaclePositions, NativeArray<Radius> obstacleRadius)
-    {
-        List<Obstacle>[,] tempObstacleBuckets = new List<Obstacle>[m_settings.bucketResolution, m_settings.bucketResolution];
-
-        for (int x = 0; x < m_settings.bucketResolution; x++)
-        {
-            for (int y = 0; y < m_settings.bucketResolution; y++)
-            {
-                tempObstacleBuckets[x, y] = new List<Obstacle>();
-            }
-        }
-
-        for (int i = 0; i < obstaclePositions.Length; i++)
-        {
-            Vector2 pos = obstaclePositions[i].Value;
-            float radius = obstacleRadius[i].Value;
-            for (int x = Mathf.FloorToInt((pos.x - radius) / m_settings.mapSize * m_settings.bucketResolution); x <= Mathf.FloorToInt((pos.x + radius) / m_settings.mapSize * m_settings.bucketResolution); x++)
-            {
-                if (x < 0 || x >= m_settings.bucketResolution)
-                {
-                    continue;
-                }
-                for (int y = Mathf.FloorToInt((pos.y - radius) / m_settings.mapSize * m_settings.bucketResolution); y <= Mathf.FloorToInt((pos.y + radius) / m_settings.mapSize * m_settings.bucketResolution); y++)
-                {
-                    if (y < 0 || y >= m_settings.bucketResolution)
-                    {
-                        continue;
-                    }
-                    tempObstacleBuckets[x, y].Add(new Obstacle { Position = pos, Radius = radius });
-                }
-            }
-        }
-
-        obstacleBuckets = new Obstacle[m_settings.bucketResolution, m_settings.bucketResolution][];
-        for (int x = 0; x < m_settings.bucketResolution; x++)
-        {
-            for (int y = 0; y < m_settings.bucketResolution; y++)
-            {
-                obstacleBuckets[x, y] = tempObstacleBuckets[x, y].ToArray();
-            }
-        }
     }
 
     protected override void OnUpdate()
     {
-        var query = GetEntityQuery(typeof(ObstacleTag), typeof(Position), typeof(Radius));
-
-        if (obstacleBuckets == null)
-        {
-            var obstaclePositions = query.ToComponentDataArray<Position>(Allocator.Temp);
-            var obstacleRadius = query.ToComponentDataArray<Radius>(Allocator.Temp);
-            CreateBuckets(obstaclePositions, obstacleRadius);
-            obstaclePositions.Dispose();
-            obstacleRadius.Dispose();
-        }
-
-        Entities.WithAll<AntTag>().ForEach((Entity e, ref Position position, ref Speed speed, ref FacingAngle facing, ref TargetPosition target) =>
+        Entities.WithAll<AntTag>().ForEach((Entity e, ref Position position, ref Speed speed, ref FacingAngle facing, ref TargetPosition target, ref PheromoneSteering pheromoneSteering) =>
         {
             float targetSpeed = m_settings.antSpeed;
 
             facing.Value += Random.Range(-m_settings.randomSteering, m_settings.randomSteering);
 
-            float pheroSteering = PheromoneSteering(position.Value, facing.Value, 3f);
+            float pheroSteering = pheromoneSteering.Value;
             int wallSteering = WallSteering(position.Value, facing.Value, 1.5f);
             facing.Value += pheroSteering * m_settings.pheromoneSteerStrength;
             facing.Value += wallSteering * m_settings.wallSteerStrength;
@@ -178,10 +101,11 @@ public class AntSteering : ComponentSystem
 
             float dx, dy, dist;
 
-            Obstacle[] nearbyObstacles = GetObstacleBucket(position.Value);
-            for (int j = 0; j < nearbyObstacles.Length; j++)
+            var nearbyObstacles = GetObstacleBucket(position.Value);
+            var obstacles = m_cache.Obstacles;
+            for (int j = 0; j < nearbyObstacles.Count; j++)
             {
-                var obstacle = nearbyObstacles[j];
+                var obstacle = obstacles[nearbyObstacles.Offset + j];
                 var obsPos = obstacle.Position;
                 var obsRad = obstacle.Radius;
                 dx = position.Value.x - obsPos.x;
@@ -219,90 +143,25 @@ public class AntSteering : ComponentSystem
                 facing.Value = Mathf.Atan2(vy, vx);
             }
 
-            float excitement = .3f;
-            if (EntityManager.HasComponent<HoldingResourceTag>(e))
-            {
-                excitement = 1f;
-            }
-            excitement *= speed.Value / m_settings.antSpeed;
-            DropPheromones(position.Value, excitement);
         });
-
-        for (int x = 0; x < m_settings.mapSize; x++)
-        {
-            for (int y = 0; y < m_settings.mapSize; y++)
-            {
-                int index = PheromoneIndex(x, y);
-                pheromones[index].r *= m_settings.trailDecay;
-            }
-        }
-
-        pheromoneTexture.SetPixels(pheromones);
-        pheromoneTexture.Apply();
     }
 
-    int PheromoneIndex(int x, int y)
-    {
-        return x + y * m_settings.mapSize;
-    }
-
-    void DropPheromones(Vector2 position, float strength)
-    {
-        int x = Mathf.FloorToInt(position.x);
-        int y = Mathf.FloorToInt(position.y);
-        if (x < 0 || y < 0 || x >= m_settings.mapSize || y >= m_settings.mapSize)
-        {
-            return;
-        }
-
-        int index = PheromoneIndex(x, y);
-        pheromones[index].r += (m_settings.trailAddSpeed * strength * Time.fixedDeltaTime) * (1f - pheromones[index].r);
-        if (pheromones[index].r > 1f)
-        {
-            pheromones[index].r = 1f;
-        }
-    }
-
-    float PheromoneSteering(float2 position, float facingAngle, float distance)
-    {
-        float output = 0;
-
-        for (int i = -1; i <= 1; i += 2)
-        {
-            float angle = facingAngle + i * Mathf.PI * .25f;
-            float testX = position.x + Mathf.Cos(angle) * distance;
-            float testY = position.y + Mathf.Sin(angle) * distance;
-
-            if (testX < 0 || testY < 0 || testX >= m_settings.mapSize || testY >= m_settings.mapSize)
-            {
-
-            }
-            else
-            {
-                int index = PheromoneIndex((int)testX, (int)testY);
-                float value = pheromones[index].r;
-                output += value * i;
-            }
-        }
-        return Mathf.Sign(output);
-    }
-
-    Obstacle[] GetObstacleBucket(Vector2 pos)
+    ObstacleCache.BucketInfo GetObstacleBucket(Vector2 pos)
     {
         return GetObstacleBucket(pos.x, pos.y);
     }
 
-    Obstacle[] GetObstacleBucket(float posX, float posY)
+    ObstacleCache.BucketInfo GetObstacleBucket(float posX, float posY)
     {
         int x = (int)(posX / m_settings.mapSize * m_settings.bucketResolution);
         int y = (int)(posY / m_settings.mapSize * m_settings.bucketResolution);
         if (x < 0 || y < 0 || x >= m_settings.bucketResolution || y >= m_settings.bucketResolution)
         {
-            return Array.Empty<Obstacle>();
+            return default;
         }
         else
         {
-            return obstacleBuckets[x, y];
+            return m_cache.Buckets[x + m_settings.bucketResolution * y];
         }
     }
 
@@ -322,7 +181,7 @@ public class AntSteering : ComponentSystem
             }
             else
             {
-                int value = GetObstacleBucket(testX, testY).Length;
+                int value = GetObstacleBucket(testX, testY).Count;
                 if (value > 0)
                 {
                     output -= i;
@@ -342,7 +201,7 @@ public class AntSteering : ComponentSystem
         for (int i = 0; i < stepCount; i++)
         {
             float t = (float)i / stepCount;
-            if (GetObstacleBucket(point1.x + dx * t, point1.y + dy * t).Length > 0)
+            if (GetObstacleBucket(point1.x + dx * t, point1.y + dy * t).Count > 0)
             {
                 return true;
             }

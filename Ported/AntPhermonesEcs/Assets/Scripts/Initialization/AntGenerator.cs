@@ -28,7 +28,7 @@ public class AntGenerator : ComponentSystem
 
     private void GenerateAnts()
     {
-        EntityArchetype archetype = EntityManager.CreateArchetype(typeof(Position), typeof(Brightness), typeof(ColorData), typeof(FacingAngle), typeof(Speed), typeof(AntTag));
+        EntityArchetype archetype = EntityManager.CreateArchetype(typeof(Position), typeof(Brightness), typeof(ColorData), typeof(FacingAngle), typeof(Speed), typeof(AntTag), typeof(PheromoneSteering));
 
         for (int i = 0; i < m_settings.antCount; i++)
         {

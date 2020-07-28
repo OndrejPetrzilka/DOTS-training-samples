@@ -7,6 +7,7 @@ using Unity.Entities;
 using UnityEngine;
 
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
+[UpdateBefore(typeof(AntSteering))]
 public class AntResourceTarget : ComponentSystem
 {
     struct HasResourceTargetTag : ISystemStateComponentData

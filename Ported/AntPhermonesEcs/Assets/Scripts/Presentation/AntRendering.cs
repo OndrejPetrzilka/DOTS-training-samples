@@ -40,7 +40,7 @@ public class AntRendering : ComponentSystem
 
     protected override void OnUpdate()
     {
-        Entities.WithAllReadOnly<AntTag, Position, FacingAngle>().ForEach((Entity e, ref Position position, ref FacingAngle facingAngle, ref ColorData color) =>
+        Entities.WithAllReadOnly<AntTag, Position, FacingAngle, ColorData>().ForEach((Entity e, ref Position position, ref FacingAngle facingAngle, ref ColorData color) =>
         {
             float angle = facingAngle.Value;
             angle /= Mathf.PI * 2f;
