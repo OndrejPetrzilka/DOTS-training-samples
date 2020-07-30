@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -15,44 +16,37 @@ using Random = UnityEngine.Random;
 [UpdateAfter(typeof(AntPheromoneDrop))]
 public class AntPheromoneDecay : JobComponentSystem
 {
-    AntSettings m_settings;
-    AntPheromones m_pheromones;
-    AntPheromoneDrop m_drop;
-    JobHandle m_handle;
-
-    public JobHandle Handle
+    struct DecayJob : IJobParallelFor
     {
-        get { return m_handle; }
+        [NativeDisableParallelForRestriction]
+        public BufferFromEntity<PheromoneBufferElement> Buffer;
+        public Entity Map;
+        public float Decay;
+
+        public void Execute(int index)
+        {
+            Buffer[Map].ElementAt(index).Value *= Decay;
+        }
     }
+
+    AntSettingsData m_settings;
 
     protected override void OnCreate()
     {
         base.OnCreate();
-        m_settings = AntSettingsManager.Current;
-        m_pheromones = World.GetExistingSystem<AntPheromones>();
-        m_drop = World.GetExistingSystem<AntPheromoneDrop>();
+        m_settings = AntSettingsManager.CurrentData;
+
+        RequireSingletonForUpdate<PheromoneBufferElement>();
     }
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
-        var pheromones = m_pheromones.Pheromones;
         int mapSize = m_settings.mapSize;
-        float decay = m_settings.trailDecay;
 
-        m_handle = Job.WithName("Decay").WithCode(() =>
-        {
-            for (int x = 0; x < mapSize; x++)
-            {
-                for (int y = 0; y < mapSize; y++)
-                {
-                    int index = AntPheromones.PheromoneIndex(x, y, mapSize);
-                    var value = pheromones[index];
-                    value *= decay;
-                    pheromones[index] = value;
-                }
-            }
-        }).Schedule(JobHandle.CombineDependencies(m_drop.Handle, inputDeps));
-        m_handle.Complete();
-        return m_handle;
+        DecayJob job;
+        job.Map = GetSingletonEntity<MapSettings>();
+        job.Buffer = GetBufferFromEntity<PheromoneBufferElement>(false);
+        job.Decay = m_settings.trailDecay;
+        return job.Schedule(mapSize * mapSize, 128, inputDeps);
     }
 }

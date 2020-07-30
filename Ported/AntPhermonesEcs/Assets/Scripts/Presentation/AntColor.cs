@@ -14,12 +14,12 @@ using Unity.Jobs;
 [UpdateBefore(typeof(AntRendering))]
 public class AntColor : JobComponentSystem
 {
-    AntSettings m_settings;
+    AntSettingsData m_settings;
 
     protected override void OnCreate()
     {
         base.OnCreate();
-        m_settings = AntSettingsManager.Current;
+        m_settings = AntSettingsManager.CurrentData;
     }
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)

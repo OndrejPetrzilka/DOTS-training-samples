@@ -8,10 +8,16 @@ using UnityEngine;
 public class AntSettingsManager : MonoBehaviour
 {
     public AntSettings Settings;
+    public AntSettingsData SettingsData;
 
     public static AntSettings Current
     {
         get { return FindObjectOfType<AntSettingsManager>().Settings; }
+    }
+
+    public static AntSettingsData CurrentData
+    {
+        get { return FindObjectOfType<AntSettingsManager>().SettingsData; }
     }
 
     [ContextMenu("Find from manager")]
@@ -32,25 +38,25 @@ public class AntSettingsManager : MonoBehaviour
         Settings.obstacleMesh = manager.obstacleMesh;
         Settings.colonyMesh = manager.colonyMesh;
         Settings.resourceMesh = manager.resourceMesh;
-        Settings.searchColor = manager.searchColor;
-        Settings.carryColor = manager.carryColor;
-        Settings.antCount = manager.antCount;
-        Settings.mapSize = manager.mapSize;
-        Settings.bucketResolution = manager.bucketResolution;
-        Settings.antSize = manager.antSize;
-        Settings.antSpeed = manager.antSpeed;
-        Settings.antAccel = manager.antAccel;
-        Settings.trailAddSpeed = manager.trailAddSpeed;
-        Settings.trailDecay = manager.trailDecay;
-        Settings.randomSteering = manager.randomSteering;
-        Settings.pheromoneSteerStrength = manager.pheromoneSteerStrength;
-        Settings.wallSteerStrength = manager.wallSteerStrength;
-        Settings.goalSteerStrength = manager.goalSteerStrength;
-        Settings.outwardStrength = manager.outwardStrength;
-        Settings.inwardStrength = manager.inwardStrength;
-        Settings.rotationResolution = manager.rotationResolution;
-        Settings.obstacleRingCount = manager.obstacleRingCount;
-        Settings.obstaclesPerRing = manager.obstaclesPerRing;
-        Settings.obstacleRadius = manager.obstacleRadius;
+        SettingsData.searchColor = manager.searchColor;
+        SettingsData.carryColor = manager.carryColor;
+        SettingsData.antCount = manager.antCount;
+        SettingsData.mapSize = manager.mapSize;
+        SettingsData.bucketResolution = manager.bucketResolution;
+        SettingsData.antSize = manager.antSize;
+        SettingsData.antSpeed = manager.antSpeed;
+        SettingsData.antAccel = manager.antAccel;
+        SettingsData.trailAddSpeed = manager.trailAddSpeed;
+        SettingsData.trailDecay = manager.trailDecay;
+        SettingsData.randomSteering = manager.randomSteering;
+        SettingsData.pheromoneSteerStrength = manager.pheromoneSteerStrength;
+        SettingsData.wallSteerStrength = manager.wallSteerStrength;
+        SettingsData.goalSteerStrength = manager.goalSteerStrength;
+        SettingsData.outwardStrength = manager.outwardStrength;
+        SettingsData.inwardStrength = manager.inwardStrength;
+        SettingsData.rotationResolution = manager.rotationResolution;
+        SettingsData.obstacleRingCount = manager.obstacleRingCount;
+        SettingsData.obstaclesPerRing = manager.obstaclesPerRing;
+        SettingsData.obstacleRadius = manager.obstacleRadius;
     }
 }

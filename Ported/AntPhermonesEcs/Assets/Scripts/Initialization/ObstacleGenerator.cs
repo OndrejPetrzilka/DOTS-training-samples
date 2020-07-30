@@ -13,12 +13,12 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(InitializationSystemGroup))]
 public class ObstacleGenerator : ComponentSystem
 {
-    AntSettings m_settings;
+    AntSettingsData m_settings;
 
     protected override void OnCreate()
     {
         base.OnCreate();
-        m_settings = AntSettingsManager.Current;
+        m_settings = AntSettingsManager.CurrentData;
         GenerateObstacles();
     }
 

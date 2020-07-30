@@ -14,14 +14,14 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class AntSteering : ComponentSystem
 {
-    AntSettings m_settings;
+    AntSettingsData m_settings;
     ObstacleCache m_cache;
 
     protected override void OnCreate()
     {
         base.OnCreate();
         m_cache = World.GetExistingSystem<ObstacleCache>();
-        m_settings = AntSettingsManager.Current;
+        m_settings = AntSettingsManager.CurrentData;
     }
 
     protected override void OnUpdate()

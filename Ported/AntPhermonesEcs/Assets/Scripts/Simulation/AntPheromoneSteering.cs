@@ -14,29 +14,25 @@ using Random = UnityEngine.Random;
 [UpdateBefore(typeof(AntSteering))]
 public class AntPheromoneSteering : JobComponentSystem
 {
-    AntSettings m_settings;
-    AntPheromones m_pheromones;
-    JobHandle m_handle;
-
-    public JobHandle Handle
-    {
-        get { return m_handle; }
-    }
+    AntSettingsData m_settings;
 
     protected override void OnCreate()
     {
         base.OnCreate();
-        m_settings = AntSettingsManager.Current;
-        m_pheromones = World.GetExistingSystem<AntPheromones>();
+        m_settings = AntSettingsManager.CurrentData;
+
+        RequireSingletonForUpdate<PheromoneBufferElement>();
     }
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         float distance = 3;
         int mapSize = m_settings.mapSize;
-        var pheromones = m_pheromones.Pheromones;
 
-        m_handle = Entities.WithName("PSteer").WithReadOnly(pheromones).WithAll<AntTag>().ForEach((Entity e, ref Position position, ref FacingAngle facing, ref PheromoneSteering steering) =>
+        var map = GetSingletonEntity<MapSettings>();
+        var buffer = GetBufferFromEntity<PheromoneBufferElement>(false);
+
+        return Entities.WithName("PSteer").WithReadOnly(buffer).WithAll<AntTag>().ForEach((Entity e, ref PheromoneSteering steering, in Position position, in FacingAngle facing) =>
         {
             float output = 0;
 
@@ -46,20 +42,14 @@ public class AntPheromoneSteering : JobComponentSystem
                 float testX = position.Value.x + math.cos(angle) * distance;
                 float testY = position.Value.y + math.sin(angle) * distance;
 
-                if (testX < 0 || testY < 0 || testX >= mapSize || testY >= mapSize)
-                {
-
-                }
-                else
+                if (testX >= 0 && testY >= 0 && testX < mapSize && testY < mapSize)
                 {
                     int index = AntPheromones.PheromoneIndex((int)testX, (int)testY, mapSize);
-                    float value = pheromones[index];
+                    float value = buffer[map][index].Value;
                     output += value * i;
                 }
             }
             steering.Value = math.sign(output);
         }).Schedule(inputDeps);
-
-        return m_handle;
     }
 }

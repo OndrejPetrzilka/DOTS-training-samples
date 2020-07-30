@@ -23,7 +23,7 @@ public class ObstacleCache : ComponentSystem
         public int Count;
     }
 
-    AntSettings m_settings;
+    AntSettingsData m_settings;
     NativeArray<Obstacle> m_obstacles;
     NativeArray<BucketInfo> m_buckets;
 
@@ -40,7 +40,7 @@ public class ObstacleCache : ComponentSystem
     protected override void OnCreate()
     {
         base.OnCreate();
-        m_settings = AntSettingsManager.Current;
+        m_settings = AntSettingsManager.CurrentData;
     }
 
     protected override void OnDestroy()

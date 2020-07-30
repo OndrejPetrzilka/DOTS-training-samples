@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Entities;
@@ -10,80 +11,62 @@ using Random = UnityEngine.Random;
 
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 [UpdateAfter(typeof(AntSteering))]
-public class AntPheromoneDrop : JobComponentSystem
+public class AntPheromoneDrop : SystemBase
 {
-    AntSettings m_settings;
-    AntPheromones m_pheromones;
-    AntPheromoneSteering m_steering;
-    JobHandle m_handle;
-
-    public JobHandle Handle
-    {
-        get { return m_handle; }
-    }
+    AntSettingsData m_settings;
 
     protected override void OnCreate()
     {
         base.OnCreate();
-        m_settings = AntSettingsManager.Current;
-        m_pheromones = World.GetExistingSystem<AntPheromones>();
-        m_steering = World.GetExistingSystem<AntPheromoneSteering>();
+        m_settings = AntSettingsManager.CurrentData;
     }
 
-    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    protected override void OnUpdate()
     {
         int mapSize = m_settings.mapSize;
         float antSpeed = m_settings.antSpeed;
         float trailAddSpeed = m_settings.trailAddSpeed;
         float deltaTime = UnityEngine.Time.fixedDeltaTime;
-        var pheromones = m_pheromones.Pheromones;
 
-        inputDeps = JobHandle.CombineDependencies(inputDeps, m_steering.Handle);
+        var map = GetSingletonEntity<MapSettings>();
+        var buffer = GetBufferFromEntity<PheromoneBufferElement>();
 
-        var withResource = Entities.WithName("DropR").WithAll<AntTag, HoldingResourceTag>().ForEach((Entity e, ref Position position, ref Speed speed) =>
+        Entities.WithName("DropR").WithAll<AntTag, HoldingResourceTag>().ForEach((Entity e, in Position position, in Speed speed) =>
         {
             float excitement = 1f;
             excitement *= speed.Value / antSpeed;
 
             int x = Mathf.FloorToInt(position.Value.x);
             int y = Mathf.FloorToInt(position.Value.y);
-            if (x < 0 || y < 0 || x >= mapSize || y >= mapSize)
+            if (x >= 0 && y >= 0 && x < mapSize && y < mapSize)
             {
-                return;
+                int index = AntPheromones.PheromoneIndex(x, y, mapSize);
+                ref PheromoneBufferElement value = ref buffer[map].ElementAt(index);
+                value.Value += (trailAddSpeed * excitement * deltaTime) * (1f - value.Value);
+                if (value.Value > 1f)
+                {
+                    value.Value = 1f;
+                }
             }
+        }).Schedule();
 
-            int index = AntPheromones.PheromoneIndex(x, y, mapSize);
-            var value = pheromones[index];
-            value += (trailAddSpeed * excitement * deltaTime) * (1f - pheromones[index]);
-            if (value > 1f)
-            {
-                value = 1f;
-            }
-            pheromones[index] = value;
-        }).Schedule(inputDeps);
-
-        m_handle = Entities.WithName("DropN").WithAll<AntTag>().WithNone<HoldingResourceTag>().ForEach((Entity e, ref Position position, ref Speed speed) =>
+        Entities.WithName("DropN").WithAll<AntTag>().WithNone<HoldingResourceTag>().ForEach((Entity e, in Position position, in Speed speed) =>
         {
-            float excitement = .3f;
+            float excitement = 0.3f;
             excitement *= speed.Value / antSpeed;
 
             int x = Mathf.FloorToInt(position.Value.x);
             int y = Mathf.FloorToInt(position.Value.y);
-            if (x < 0 || y < 0 || x >= mapSize || y >= mapSize)
+            if (x >= 0 && y >= 0 && x < mapSize && y < mapSize)
             {
-                return;
+                int index = AntPheromones.PheromoneIndex(x, y, mapSize);
+                ref PheromoneBufferElement value = ref buffer[map].ElementAt(index);
+                value.Value += (trailAddSpeed * excitement * deltaTime) * (1f - value.Value);
+                if (value.Value > 1f)
+                {
+                    value.Value = 1f;
+                }
             }
-
-            int index = AntPheromones.PheromoneIndex(x, y, mapSize);
-            var value = pheromones[index];
-            value += (trailAddSpeed * excitement * deltaTime) * (1f - pheromones[index]);
-            if (value > 1f)
-            {
-                value = 1f;
-            }
-            pheromones[index] = value;
-        }).Schedule(withResource);
-
-        return m_handle;
+        }).Schedule();
     }
 }

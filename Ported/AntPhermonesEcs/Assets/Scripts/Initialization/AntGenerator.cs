@@ -13,12 +13,12 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(InitializationSystemGroup))]
 public class AntGenerator : ComponentSystem
 {
-    AntSettings m_settings;
+    AntSettingsData m_settings;
 
     protected override void OnCreate()
     {
         base.OnCreate();
-        m_settings = AntSettingsManager.Current;
+        m_settings = AntSettingsManager.CurrentData;
         GenerateAnts();
     }
 
@@ -40,6 +40,16 @@ public class AntGenerator : ComponentSystem
             EntityManager.SetComponentData(entity, new Brightness { Value = Random.Range(.75f, 1.25f) });
             EntityManager.SetComponentData(entity, new FacingAngle { Value = Random.value * Mathf.PI * 2f });
             EntityManager.SetComponentData(entity, new Speed { Value = 0 });
+        }
+
+        var map = EntityManager.CreateEntity(typeof(MapSettings));
+        EntityManager.SetName(map, "Map");
+        EntityManager.SetComponentData(map, new MapSettings { MapSize = m_settings.mapSize });
+        var buffer = EntityManager.AddBuffer<PheromoneBufferElement>(map);
+        buffer.Capacity = m_settings.mapSize * m_settings.mapSize;
+        for (int i = 0; i < buffer.Capacity; i++)
+        {
+            buffer.Add(default);
         }
     }
 }
