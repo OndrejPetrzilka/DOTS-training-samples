@@ -9,6 +9,7 @@ using UnityEngine;
 using Unity.Transforms;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
+using UnityEditor;
 
 [UpdateInGroup(typeof(InitializationSystemGroup))]
 public class SimulationSpeedInput : ComponentSystem
@@ -19,9 +20,13 @@ public class SimulationSpeedInput : ComponentSystem
         {
             if (Input.GetKeyDown(KeyCode.Alpha0 + i))
             {
-                UnityEngine.Time.timeScale = i;
+                UnityEngine.Time.timeScale = i * i;
                 //UnityEngine.Time.fixedDeltaTime = i * 1 / 50.0f;
             }
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha0))
+        {
+            UnityEngine.Time.timeScale = 100;
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -30,9 +31,9 @@ public class AntPheromoneSteering : JobComponentSystem
         int mapSize = m_settings.mapSize;
 
         var map = GetSingletonEntity<MapSettings>();
-        var buffer = GetBufferFromEntity<PheromoneBufferElement>(false);
+        var buffer = GetBufferFromEntity<PheromoneBufferElement>(true);
 
-        return Entities.WithName("PSteer").WithReadOnly(buffer).WithAll<AntTag>().ForEach((Entity e, ref PheromoneSteering steering, in Position position, in FacingAngle facing) =>
+        return Entities.WithName("PSteer").WithBurst(FloatMode.Fast, FloatPrecision.Low).WithReadOnly(buffer).WithAll<AntTag>().ForEach((Entity e, ref PheromoneSteering steering, in Position position, in FacingAngle facing) =>
         {
             float output = 0;
 

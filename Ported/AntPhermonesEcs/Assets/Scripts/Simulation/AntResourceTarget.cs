@@ -7,42 +7,26 @@ using Unity.Entities;
 using UnityEngine;
 
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
-public class AntResourceTarget : ComponentSystem
+public class AntResourceTarget : SystemBase
 {
-    struct HasResourceTargetTag : ISystemStateComponentData
-    {
-    }
-
     AntSettingsData m_settings;
+    EndSimulationEntityCommandBufferSystem m_endSimulation;
 
     protected override void OnCreate()
     {
         base.OnCreate();
         m_settings = AntSettingsManager.CurrentData;
+        m_endSimulation = World.GetExistingSystem<EndSimulationEntityCommandBufferSystem>();
+
+        var resourcePosition = GetSingleton<Resource>().Position;
+
+        Entities.WithAll<AntTag>().WithNone<TargetPosition>().WithStructuralChanges().ForEach((Entity e, int entityInQueryIndex) =>
+        {
+            EntityManager.AddComponentData(e, new TargetPosition { Value = resourcePosition });
+        }).Run();
     }
 
     protected override void OnUpdate()
     {
-        var resourcePosition = GetSingleton<Resource>().Position;
-
-        // Has no target
-        Entities.WithAll<AntTag>().WithNone<TargetPosition>().ForEach((Entity e) =>
-        {
-            EntityManager.AddComponentData(e, new TargetPosition { Value = resourcePosition });
-        });
-
-        // Picked up resource
-        Entities.WithAll<AntTag, HoldingResourceTag>().WithNone<HasResourceTargetTag>().ForEach((Entity e, ref TargetPosition target) =>
-        {
-            target.Value = m_settings.colonyPosition;
-            EntityManager.AddComponent<HasResourceTargetTag>(e);
-        });
-
-        // Dropped resource
-        Entities.WithAll<AntTag, HasResourceTargetTag>().WithNone<HoldingResourceTag>().ForEach((Entity e, ref TargetPosition target) =>
-        {
-            target.Value = resourcePosition;
-            EntityManager.RemoveComponent<HasResourceTargetTag>(e);
-        });
     }
 }
