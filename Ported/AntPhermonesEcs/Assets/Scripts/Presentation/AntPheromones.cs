@@ -19,7 +19,6 @@ public class AntPheromones : JobComponentSystem
 
     Texture2D pheromoneTexture;
     Material myPheromoneMaterial;
-    NativeArray<Color32> textureData;
 
     public static int PheromoneIndex(int x, int y, int mapSize)
     {
@@ -32,8 +31,6 @@ public class AntPheromones : JobComponentSystem
         m_settings = AntSettingsManager.Current;
         m_settingsData = AntSettingsManager.CurrentData;
 
-        textureData = new NativeArray<Color32>(m_settingsData.mapSize * m_settingsData.mapSize, Allocator.Persistent);
-
         pheromoneTexture = new Texture2D(m_settingsData.mapSize, m_settingsData.mapSize);
         pheromoneTexture.wrapMode = TextureWrapMode.Mirror;
         myPheromoneMaterial = new Material(m_settings.basePheromoneMaterial);
@@ -45,7 +42,6 @@ public class AntPheromones : JobComponentSystem
 
     protected override void OnDestroy()
     {
-        textureData.Dispose();
         Object.DestroyImmediate(pheromoneTexture);
         base.OnDestroy();
     }
