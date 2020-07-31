@@ -53,8 +53,8 @@ public class AntPheromones : JobComponentSystem
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         var map = GetSingletonEntity<MapSettings>();
-        var buffer = GetBufferFromEntity<PheromoneBufferElement>(false);
-        var textureData = this.textureData;
+        var buffer = GetBufferFromEntity<PheromoneBufferElement>(true);
+        var textureData = pheromoneTexture.GetRawTextureData<Color32>();
 
         Job.WithName("Pheromones").WithReadOnly(buffer).WithCode(() =>
         {
@@ -65,7 +65,6 @@ public class AntPheromones : JobComponentSystem
             }
         }).Schedule(inputDeps).Complete();
 
-        pheromoneTexture.SetPixelData(textureData, 0);
         pheromoneTexture.Apply();
         return default;
     }
