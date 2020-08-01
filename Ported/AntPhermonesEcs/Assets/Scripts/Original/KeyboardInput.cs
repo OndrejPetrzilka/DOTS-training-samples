@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using Unity.Entities;
 
 public class KeyboardInput : MonoBehaviour
 {
@@ -26,7 +27,14 @@ public class KeyboardInput : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.R))
         {
             Time.timeScale = 1f;
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            StartCoroutine(RestartLate());
         }
+    }
+
+    IEnumerator RestartLate()
+    {
+        yield return new WaitForEndOfFrame();
+        World.DefaultGameObjectInjectionWorld.Dispose();
+        DefaultWorldInitialization.Initialize("Default World", false);
     }
 }
