@@ -4,20 +4,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
 [UpdateInGroup(typeof(PresentationSystemGroup))]
-public class AntRendering : ComponentSystem
+public class AntRendering : SystemBase
 {
     AntSettings m_settings;
     AntSettingsData m_settingsData;
     NativeArray<Matrix4x4> m_rotationMatrices;
     MaterialPropertyBlock m_block;
 
-    List<Matrix4x4> m_matrices = new List<Matrix4x4>(1024);
-    List<Vector4> m_colors = new List<Vector4>(1024);
+    Matrix4x4[] m_matrices = new Matrix4x4[1023];
+    Vector4[] m_colors = new Vector4[1023];
+
+    EntityQuery m_query;
 
     protected override void OnCreate()
     {
@@ -34,6 +37,7 @@ public class AntRendering : ComponentSystem
         }
 
         m_block = new MaterialPropertyBlock();
+        m_query = GetEntityQuery(ComponentType.ReadOnly<AntTag>(), ComponentType.ReadOnly<Position>(), ComponentType.ReadOnly<FacingAngle>(), ComponentType.ReadOnly<ColorData>());
     }
 
     protected override void OnDestroy()
@@ -43,27 +47,36 @@ public class AntRendering : ComponentSystem
         base.OnDestroy();
     }
 
-    protected override void OnUpdate()
+    protected unsafe override void OnUpdate()
     {
-        m_matrices.Clear();
-        m_colors.Clear();
+        var rotations = m_rotationMatrices;
+        var settings = m_settingsData;
 
-        Entities.WithAllReadOnly<AntTag, Position, FacingAngle, ColorData>().ForEach((Entity e, ref Position position, ref FacingAngle facingAngle, ref ColorData color) =>
+        fixed (Matrix4x4* matrixPtr = m_matrices)
+        fixed (Vector4* colorPtr = m_colors)
         {
-            float angle = facingAngle.Value;
-            angle /= Mathf.PI * 2f;
-            angle -= Mathf.Floor(angle);
-            angle *= m_settingsData.rotationResolution;
+            var matrices = matrixPtr;
+            var colors = colorPtr;
 
-            Matrix4x4 matrix = m_rotationMatrices[((int)angle) % m_settingsData.rotationResolution];
-            matrix.m03 = position.Value.x / m_settingsData.mapSize;
-            matrix.m13 = position.Value.y / m_settingsData.mapSize;
+            Entities.WithNativeDisableUnsafePtrRestriction(matrices).WithNativeDisableUnsafePtrRestriction(colors).WithAll<AntTag>().ForEach((Entity e, int entityInQueryIndex, in Position position, in FacingAngle facingAngle, in ColorData color) =>
+            {
+                float angle = facingAngle.Value;
+                angle /= Mathf.PI * 2f;
+                angle -= Mathf.Floor(angle);
+                angle *= settings.rotationResolution;
 
-            m_matrices.Add(matrix);
-            m_colors.Add(color.Value);
-        });
+                Matrix4x4 matrix = rotations[((int)angle) % settings.rotationResolution];
+                matrix.m03 = position.Value.x / settings.mapSize;
+                matrix.m13 = position.Value.y / settings.mapSize;
+
+                matrices[entityInQueryIndex] = matrix;
+                colors[entityInQueryIndex] = color.Value;
+            }).ScheduleParallel(Dependency).Complete();
+        }
+
+        int count = m_query.CalculateEntityCount();
 
         m_block.SetVectorArray("_Color", m_colors);
-        Graphics.DrawMeshInstanced(m_settings.antMesh, 0, m_settings.antMaterial, m_matrices, m_block);
+        Graphics.DrawMeshInstanced(m_settings.antMesh, 0, m_settings.antMaterial, m_matrices, count, m_block);
     }
 }
