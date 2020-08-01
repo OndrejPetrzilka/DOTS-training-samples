@@ -27,12 +27,12 @@ public class AntColor : JobComponentSystem
         var carryColor = (float4)(Vector4)m_settings.carryColor;
         var searchColor = (float4)(Vector4)m_settings.searchColor;
 
-        var carry = Entities.WithAll<AntTag, HoldingResourceTag>().ForEach((ref Brightness brightness, ref ColorData color) =>
+        var carry = Entities.WithAll<AntTag, HoldingResourceTag>().ForEach((ref ColorData color, in Brightness brightness) =>
         {
             color.Value += (carryColor * brightness.Value - color.Value) * 0.05f;
         }).Schedule(inputDeps);
 
-        return Entities.WithAll<AntTag>().WithNone<HoldingResourceTag>().ForEach((ref Brightness brightness, ref ColorData color) =>
+        return Entities.WithAll<AntTag>().WithNone<HoldingResourceTag>().ForEach((ref ColorData color, in Brightness brightness) =>
         {
             color.Value += (searchColor * brightness.Value - color.Value) * 0.05f;
         }).Schedule(carry);
