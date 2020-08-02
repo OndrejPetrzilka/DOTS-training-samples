@@ -45,6 +45,8 @@ public class Farm : MonoBehaviour
     static int moneyForFarmers;
     static int moneyForDrones;
 
+    public static Pathing.CheckMatchDelegate IsHarvestableAndUnreservedCached = Farm.IsHarvestableAndUnreserved;
+
     public const int instancesPerBatch = 1023;
 
     void TrySpawnRock()

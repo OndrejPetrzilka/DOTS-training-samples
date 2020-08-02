@@ -46,7 +46,7 @@ public class Drone
         {
             if (searchTimer < 0f)
             {
-                int plantTileHash = Pathing.SearchForOne(tileX, tileY, 30, Pathing.IsNavigableAll, Farm.IsHarvestableAndUnreserved, Pathing.fullMapZone);
+                int plantTileHash = Pathing.SearchForOne(tileX, tileY, 30, Pathing.IsNavigableAllCached, Farm.IsHarvestableAndUnreservedCached, Pathing.fullMapZone);
                 if (plantTileHash != -1)
                 {
                     int x, y;
@@ -104,7 +104,7 @@ public class Drone
 
         if (storeX == -1)
         {
-            int storeTileHash = Pathing.SearchForOne(tileX, tileY, 30, Pathing.IsNavigableAll, Pathing.IsStore, Pathing.fullMapZone);
+            int storeTileHash = Pathing.SearchForOne(tileX, tileY, 30, Pathing.IsNavigableAllCached, Pathing.IsStoreCached, Pathing.fullMapZone);
             if (storeTileHash != -1)
             {
                 Pathing.Unhash(storeTileHash, out storeX, out storeY);

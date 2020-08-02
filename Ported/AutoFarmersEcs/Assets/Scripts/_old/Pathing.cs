@@ -20,6 +20,13 @@ public static class Pathing
 
     public static RectInt fullMapZone;
 
+    public static readonly CheckMatchDelegate IsStoreCached = IsStore;
+    public static readonly IsNavigableDelegate IsNavigableAllCached = IsNavigableAll;
+    public static readonly IsNavigableDelegate IsNavigableDefaultCached = IsNavigableDefault;
+    public static readonly CheckMatchDelegate IsTillableCached = IsTillable;
+    public static readonly CheckMatchDelegate IsReadyForPlantCached = IsReadyForPlant;
+    public static readonly CheckMatchDelegate IsRockCached = IsRock;
+
     public static int Hash(int x, int y)
     {
         return y * mapWidth + x;
@@ -63,7 +70,7 @@ public static class Pathing
 
     public static Rock FindNearbyRock(int x, int y, int range, Path outputPath)
     {
-        int rockPosHash = SearchForOne(x, y, range, IsNavigableDefault, IsRock, fullMapZone);
+        int rockPosHash = SearchForOne(x, y, range, IsNavigableDefaultCached, IsRockCached, fullMapZone);
         if (rockPosHash == -1)
         {
             return null;
@@ -82,7 +89,7 @@ public static class Pathing
 
     public static void WalkTo(int x, int y, int range, CheckMatchDelegate CheckMatch, Path outputPath)
     {
-        int storePosHash = SearchForOne(x, y, range, IsNavigableDefault, CheckMatch, fullMapZone);
+        int storePosHash = SearchForOne(x, y, range, IsNavigableDefaultCached, CheckMatch, fullMapZone);
         if (storePosHash != -1)
         {
             int storeX, storeY;

@@ -177,7 +177,7 @@ public class Farmer
             {
                 if (path.count == 0)
                 {
-                    int tileHash = Pathing.SearchForOne(tileX, tileY, 25, Pathing.IsNavigableDefault, Pathing.IsTillable, tillingZone);
+                    int tileHash = Pathing.SearchForOne(tileX, tileY, 25, Pathing.IsNavigableDefaultCached, Pathing.IsTillableCached, tillingZone);
                     if (tileHash != -1)
                     {
                         int tileX, tileY;
@@ -203,7 +203,7 @@ public class Farmer
             }
             else if (path.count == 0)
             {
-                Pathing.WalkTo(tileX, tileY, 40, Pathing.IsStore, path);
+                Pathing.WalkTo(tileX, tileY, 40, Pathing.IsStoreCached, path);
                 if (path.count == 0)
                 {
                     intention = Intention.None;
@@ -226,7 +226,7 @@ public class Farmer
                 }
                 else
                 {
-                    int tileHash = Pathing.SearchForOne(tileX, tileY, 25, Pathing.IsNavigableDefault, Pathing.IsReadyForPlant, Pathing.fullMapZone);
+                    int tileHash = Pathing.SearchForOne(tileX, tileY, 25, Pathing.IsNavigableDefaultCached, Pathing.IsReadyForPlantCached, Pathing.fullMapZone);
                     if (tileHash != -1)
                     {
                         int tileX, tileY;
@@ -254,7 +254,7 @@ public class Farmer
             }
             else if (path.count == 0)
             {
-                Pathing.WalkTo(tileX, tileY, 25, Farm.IsHarvestableAndUnreserved, path);
+                Pathing.WalkTo(tileX, tileY, 25, Farm.IsHarvestableAndUnreservedCached, path);
                 if (path.count == 0)
                 {
                     intention = Intention.None;
@@ -278,7 +278,7 @@ public class Farmer
             }
             else if (path.count == 0)
             {
-                Pathing.WalkTo(tileX, tileY, 40, Pathing.IsStore, path);
+                Pathing.WalkTo(tileX, tileY, 40, Pathing.IsStoreCached, path);
             }
         }
     }
