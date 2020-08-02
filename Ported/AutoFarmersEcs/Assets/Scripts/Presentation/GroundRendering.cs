@@ -11,6 +11,18 @@ using Random = Unity.Mathematics.Random;
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 public class GroundRendering : SystemBase
 {
+    struct Batch
+    {
+        public Matrix4x4[] Matrices;
+        public MaterialPropertyBlock Block;
+    }
+
+    const int BatchSize = 1023; // DrawMeshInstanced limitation
+    int size = -1;
+
+    Batch[] m_batches;
+    float[] m_tmpTill = new float[BatchSize];
+
     protected override void OnCreate()
     {
         base.OnCreate();
@@ -23,31 +35,47 @@ public class GroundRendering : SystemBase
         var settings = this.GetSettings();
         var mesh = settings.groundMesh;
         var material = settings.groundMaterial;
+        var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
 
         var rng = new Random(1);
-
-        var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
-        for (int x = 0; x < settings.mapSize.x; x++)
+        if (ground.Length != size)
         {
-            for (int y = 0; y < settings.mapSize.y; y++)
+            size = ground.Length;
+            int batchCount = Mathf.CeilToInt(ground.Length / (float)BatchSize);
+            m_batches = new Batch[batchCount];
+            for (int b = 0; b < batchCount; b++)
             {
-                var item = ground[x + y * settings.mapSize.x];
+                int batchLen = Mathf.Min(BatchSize, size - b * BatchSize);
 
-                Vector3 pos = new Vector3(x + .5f, 0f, y + .5f);
-                float zRot = rng.NextInt(0, 2) * 180f;
-                var matrix = Matrix4x4.TRS(pos, Quaternion.Euler(90f, 0f, zRot), Vector3.one);
+                Batch batch;
+                batch.Matrices = new Matrix4x4[batchLen];
+                batch.Block = new MaterialPropertyBlock();
+                m_batches[b] = batch;
 
-                material.SetFloat("_Tilled", item.Till);
-                //groundMatProps[i].SetFloatArray("_Tilled", tilledProperties[i]);
-
-                Graphics.DrawMesh(mesh, matrix, material, 0);
+                for (int i = 0; i < batchLen; i++)
+                {
+                    int index = b * BatchSize + i;
+                    int x = index % settings.mapSize.x;
+                    int y = index / settings.mapSize.x;
+                    Vector3 pos = new Vector3(x + .5f, 0f, y + .5f);
+                    float zRot = rng.NextInt(0, 2) * 180f;
+                    batch.Matrices[i] = Matrix4x4.TRS(pos, Quaternion.Euler(90f, 0f, zRot), Vector3.one);
+                }
             }
         }
 
-        //Entities.WithoutBurst().WithAll<StoreTag>().ForEach((Entity entity, in Position position) =>
-        //{
-        //    var matrix = Matrix4x4.TRS(new Vector3(position.Value.x + .5f, .6f, position.Value.y + .5f), Quaternion.identity, new Vector3(1f, .6f, 1f));
-        //    Graphics.DrawMesh(mesh, matrix, material, 0);
-        //}).Run();
+        for (int b = 0; b < m_batches.Length; b++)
+        {
+            int batchLen = Mathf.Min(BatchSize, size - b * BatchSize);
+            for (int i = 0; i < batchLen; i++)
+            {
+                int index = b * BatchSize + i;
+                var item = ground[index];
+                m_tmpTill[i] = item.Till;
+            }
+            var batch = m_batches[b];
+            batch.Block.SetFloatArray("_Tilled", m_tmpTill);
+            Graphics.DrawMeshInstanced(mesh, 0, material, batch.Matrices, batch.Matrices.Length, batch.Block);
+        }
     }
 }
