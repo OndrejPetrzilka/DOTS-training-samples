@@ -124,6 +124,175 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &113544368
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 113544370}
+  - component: {fileID: 113544369}
+  - component: {fileID: 113544371}
+  m_Layer: 0
+  m_Name: Settings
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &113544369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 113544368}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b1511e75707f004db53e6bd6fe78974, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mapSize:
+    x: 60
+    y: 60
+  storeCount: 50
+  rockSpawnAttempts: 2000
+  rockMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  rockMaterial: {fileID: 2100000, guid: 32151c15b456399478eea1583b8fece6, type: 2}
+  plantMaterial: {fileID: 2100000, guid: 8907cc0a8ccd517458a182638104c97e, type: 2}
+  groundMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+  groundMaterial: {fileID: 2100000, guid: 1a7e14a4d6de2cb4db04611495ac866e, type: 2}
+  storeMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  storeMaterial: {fileID: 2100000, guid: 0c6231ce0d2f0724c95a7dc30122b4a0, type: 2}
+  soldPlantYCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 2
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.5
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 10
+      inSlope: 38.26825
+      outSlope: 38.26825
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 0
+  soldPlantXZScaleCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.3
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 0
+  soldPlantYScaleCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 2
+      inSlope: 2.285513
+      outSlope: 2.285513
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 0
+  farmerMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  farmerMaterial: {fileID: 2100000, guid: d5df058b269f73f419ae386aa3adbc0f, type: 2}
+  initialFarmerCount: 1
+  maxFarmerCount: 300
+  movementSmooth: 0.003
+  droneMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  droneMaterial: {fileID: 2100000, guid: 2ed50a8b29fa6db4585cadc189152d6f, type: 2}
+  maxDroneCount: 1500
+  moveSmooth: 0.1
+  carrySmooth: 0.005
+--- !u!4 &113544370
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 113544368}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 6
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &113544371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 113544368}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea7d7495833204790ba1d3a8755397f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ConversionMode: 0
 --- !u!1 &313438282
 GameObject:
   m_ObjectHideFlags: 0
@@ -232,7 +401,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &529914873
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -373,7 +542,7 @@ MonoBehaviour:
   viewDist: 10
   mouseSensitivity: 4000
   freeCamera: 1
-  moveSpeed: 0.004
+  moveSpeed: 0.1
   zoomSpeed: 1
 --- !u!1 &1358342729
 GameObject:
@@ -391,7 +560,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1358342730
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -663,7 +832,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1929399920
 MonoBehaviour:
   m_ObjectHideFlags: 0
