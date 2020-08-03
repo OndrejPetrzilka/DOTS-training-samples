@@ -12,56 +12,65 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class FarmerClearRocks : SystemBase
 {
+    EntityQuery m_hasWork;
+
     protected override void OnCreate()
     {
         base.OnCreate();
         RequireSingletonForUpdate<Settings>();
+        RequireSingletonForUpdate<RockLookup>();
+        m_hasWork = GetEntityQuery(typeof(WorkClearRocks));
     }
 
     protected override void OnUpdate()
     {
         var settings = this.GetSettings();
+        var lookup = this.GetSingleton<RockLookup>();
         var mapSize = settings.mapSize;
-        int count = 0;
 
-        NativeArray<Entity> lookup = new NativeArray<Entity>(mapSize.x * mapSize.y, Allocator.Temp, NativeArrayOptions.ClearMemory);
-
-        Entities.WithAll<RockTag>().ForEach((Entity e, in Position pos, in Size size) =>
+        bool remove = false;
+        if (lookup.Length > 0)
         {
-            count++;
-            for (int x = 0; x <= size.Value.x; x++)
+            // Initial state
+            Entities.WithStructuralChanges().WithAll<FarmerTag, WorkClearRocks>().WithNone<WorkTarget>().ForEach((Entity e, in PositionF position) =>
             {
-                for (int y = 0; y <= size.Value.y; y++)
+                // Find rock & generate path
+                // TODO: Do width-first search for a rock, remember the path on the way
+
+                float distSq = float.MaxValue;
+                Entity rock = Entity.Null;
+                for (int i = 0; i < lookup.Length; i++)
                 {
-                    int2 p = pos.Value + new int2(x, y);
-                    int index = p.x + p.y * mapSize.x;
-                    lookup[index] = e;
+                    int2 pos = new int2(i % mapSize.x, i / mapSize.x);
+                    float newDistSq = math.lengthsq(position.Value - pos);
+                    if (newDistSq < distSq)
+                    {
+                        var newRock = lookup[i].Entity;
+                        if (EntityManager.Exists(newRock))
+                        {
+                            rock = newRock;
+                            distSq = newDistSq;
+                        }
+                    }
                 }
-            }
-        }).Run();
 
-        // Initial state
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkClearRocks>().WithNone<WorkTarget>().ForEach((Entity e) =>
-        {
-            // Find rock & generate path
-            // Do width-first search for a rock, remember the path on the way
+                if (rock == Entity.Null)
+                {
+                    remove = true;
+                }
+                else
+                {
+                    EntityManager.AddComponentData(e, new WorkTarget { Value = rock });
+                    var buffer = EntityManager.AddBuffer<PathData>(e);
+                    buffer.Add(new PathData { Position = EntityManager.GetComponentData<Position>(rock).Value });
+                }
+            }).Run();
 
-            if (count == 0)
+            if (remove)
             {
-                // TODO: Separate job
-                EntityManager.RemoveComponent<WorkClearRocks>(e);
+                EntityManager.RemoveComponent(m_hasWork, typeof(WorkClearRocks));
             }
-            else
-            {
-                var rock = lookup.First(s => s != Entity.Null);
-                EntityManager.AddComponentData(e, new WorkTarget { Value = rock });
-                var buffer = EntityManager.AddBuffer<PathData>(e);
-                buffer.Add(new PathData { Position = EntityManager.GetComponentData<Position>(rock).Value });
-            }
-
-        }).Run();
-
-        lookup.Dispose();
+        }
 
         // Reached target
         Entities.WithStructuralChanges().WithAll<FarmerTag, WorkClearRocks>().WithNone<PathData>().ForEach((Entity e, in WorkTarget target) =>

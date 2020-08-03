@@ -84,6 +84,6 @@ public class CamFollow : MonoBehaviour
         var worldDirection = transform.TransformDirection(localDirection);
         worldDirection.y = 0;
         worldDirection = worldDirection.normalized;
-        transform.position += worldDirection * moveSpeed * Time.time;
+        transform.position += worldDirection * moveSpeed * Time.unscaledDeltaTime;
     }
 }
