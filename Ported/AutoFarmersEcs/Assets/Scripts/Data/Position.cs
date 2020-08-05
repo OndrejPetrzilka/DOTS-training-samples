@@ -8,5 +8,5 @@ using Unity.Mathematics;
 
 public struct Position : IComponentData
 {
-    public int2 Value;
+    public float2 Value;
 }

@@ -8,31 +8,31 @@ using Unity.Entities;
 using Unity.Mathematics;
 
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup), OrderFirst = true)]
-public class RockLookupSystem : SystemBase
+public class StoreLookupSystem : SystemBase
 {
-    struct RockLookupData : ISystemStateComponentData
+    struct StoreLookupData : ISystemStateComponentData
     {
         public int2 Position;
         public int2 Size;
     }
 
-    EntityQuery m_deletedRocks;
+    EntityQuery m_deletedStores;
     EntityCommandBufferSystem m_cmdBuffer;
 
     protected override void OnCreate()
     {
         base.OnCreate();
         RequireSingletonForUpdate<Settings>();
-        m_deletedRocks = GetEntityQuery(new EntityQueryDesc() { All = new ComponentType[] { typeof(RockLookupData) }, None = new ComponentType[] { typeof(RockTag) }, });
+        m_deletedStores = GetEntityQuery(new EntityQueryDesc() { All = new ComponentType[] { typeof(StoreLookupData) }, None = new ComponentType[] { typeof(StoreTag) }, });
 
-        EntityManager.AddBuffer<RockLookup>(EntityManager.CreateEntity());
+        EntityManager.AddBuffer<StoreLookup>(EntityManager.CreateEntity());
         m_cmdBuffer = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
     }
 
     protected override void OnUpdate()
     {
         var mapSize = this.GetSettings().mapSize;
-        var lookup = EntityManager.AddBuffer<RockLookup>(GetSingletonEntity<RockLookup>());
+        var lookup = EntityManager.AddBuffer<StoreLookup>(GetSingletonEntity<StoreLookup>());
         if (lookup.Length == 0)
         {
             lookup.Length = mapSize.x * mapSize.y;
@@ -44,12 +44,12 @@ public class RockLookupSystem : SystemBase
 
         var buffer = m_cmdBuffer.CreateCommandBuffer();
 
-        // Rocks are immovable, change filter to update position not needed
+        // Stores are immovable, change filter to update position not needed
 
-        // Add new rocks
-        Entities.WithStructuralChanges().WithAll<RockTag>().WithNone<RockLookupData>().ForEach((Entity e, in Position position, in Size size) =>
+        // Add new Stores
+        Entities.WithStructuralChanges().WithAll<StoreTag>().WithNone<StoreLookupData>().ForEach((Entity e, in Position position, in Size size) =>
         {
-            RockLookupData data;
+            StoreLookupData data;
             data.Position = (int2)position.Value;
             data.Size = (int2)size.Value;
             SetLookupData(lookup, e, data.Position, data.Size, mapSize.x);
@@ -57,18 +57,18 @@ public class RockLookupSystem : SystemBase
         }).Run();
 
         // Remove from lookup
-        Entities.WithNone<RockTag>().ForEach((Entity e, in RockLookupData data) =>
+        Entities.WithNone<StoreTag>().ForEach((Entity e, in StoreLookupData data) =>
         {
             SetLookupData(lookup, Entity.Null, data.Position, data.Size, mapSize.x);
         }).Run();
 
         // Remove components
-        EntityManager.RemoveComponent(m_deletedRocks, typeof(RockLookupData));
+        EntityManager.RemoveComponent(m_deletedStores, typeof(StoreLookupData));
 
         m_cmdBuffer.AddJobHandleForProducer(Dependency);
     }
 
-    static void SetLookupData(DynamicBuffer<RockLookup> lookup, Entity e, int2 pos, int2 size, int mapWidth)
+    static void SetLookupData(DynamicBuffer<StoreLookup> lookup, Entity e, int2 pos, int2 size, int mapWidth)
     {
         for (int x = 0; x <= size.x; x++)
         {

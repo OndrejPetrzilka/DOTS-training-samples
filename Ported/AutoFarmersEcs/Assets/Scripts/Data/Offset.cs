@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Unity.Entities;
 using Unity.Mathematics;
 
-public struct Size : IComponentData
+public struct Offset : IComponentData
 {
     public float2 Value;
 }

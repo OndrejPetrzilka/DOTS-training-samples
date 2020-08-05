@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 
 [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -23,7 +24,10 @@ public class FarmerRendering : SystemBase
 
         Entities.WithoutBurst().WithAll<FarmerTag>().ForEach((Entity entity, in SmoothPosition smoothPosition) =>
         {
-            var matrix = Matrix4x4.Translate(new Vector3(smoothPosition.Value.x, .5f, smoothPosition.Value.y)) * Matrix4x4.Scale(Vector3.one * .5f);
+            var pos = smoothPosition.Value;
+            pos += EntityManager.HasComponent<Offset>(entity) ? EntityManager.GetComponentData<Offset>(entity).Value : default;
+
+            var matrix = Matrix4x4.Translate(new float3(pos.x, .5f, pos.y)) * Matrix4x4.Scale(Vector3.one * .5f);
             Graphics.DrawMesh(mesh, matrix, material, 0);
         }).Run();
     }

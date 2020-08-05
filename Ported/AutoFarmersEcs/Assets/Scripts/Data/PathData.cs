@@ -8,5 +8,5 @@ using Unity.Mathematics;
 
 public struct PathData : IBufferElementData
 {
-    public int2 Position;
+    public float2 Position;
 }

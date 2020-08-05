@@ -32,7 +32,7 @@ public class FarmerClearRocks : SystemBase
         if (lookup.Length > 0)
         {
             // Initial state
-            Entities.WithStructuralChanges().WithAll<FarmerTag, WorkClearRocks>().WithNone<WorkTarget>().ForEach((Entity e, in PositionF position) =>
+            Entities.WithStructuralChanges().WithAll<FarmerTag, WorkClearRocks>().WithNone<WorkTarget>().ForEach((Entity e, in Position position) =>
             {
                 // Find rock & generate path
                 // TODO: Do width-first search for a rock, remember the path on the way
@@ -76,6 +76,8 @@ public class FarmerClearRocks : SystemBase
         Entities.WithStructuralChanges().WithAll<FarmerTag, WorkClearRocks>().WithNone<PathData>().ForEach((Entity e, in WorkTarget target) =>
         {
             // Attack rock
+            var rockPosition = EntityManager.GetComponentData<Position>(target.Value).Value;
+
             int health = 0;
             if (target.Value != Entity.Null)
             {
@@ -86,6 +88,11 @@ public class FarmerClearRocks : SystemBase
                     EntityManager.DestroyEntity(target.Value);
                 }
             }
+            
+            var pos = EntityManager.GetComponentData<SmoothPosition>(e).Value;
+            Offset offset = default;
+            offset.Value = math.normalizesafe(rockPosition - pos) * 0.5f * Random.value;
+            EntityManager.SetComponentData(e, offset);
             if (health <= 0)
             {
                 EntityManager.RemoveComponent<WorkClearRocks>(e);

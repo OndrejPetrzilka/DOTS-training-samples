@@ -22,7 +22,7 @@ public class FollowPath : SystemBase
         float walkSpeed = 4;
         float deltaTime = Time.fixedDeltaTime;
 
-        Entities.WithStructuralChanges().ForEach((Entity e, DynamicBuffer<PathData> path, ref PositionF position) =>
+        Entities.WithStructuralChanges().ForEach((Entity e, DynamicBuffer<PathData> path, ref Position position) =>
         {
             int2 pos = (int2)math.floor(position.Value);
             if (path.Length == 0)

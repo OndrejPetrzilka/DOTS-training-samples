@@ -147,7 +147,7 @@ public class SettingsAuthoring : MonoBehaviour, IConvertGameObjectToEntity
         }
 
         // Farmers
-        var farmerArchetype = dstManager.CreateArchetype(typeof(FarmerTag), typeof(PositionF), typeof(SmoothPosition));
+        var farmerArchetype = dstManager.CreateArchetype(typeof(FarmerTag), typeof(Position), typeof(SmoothPosition), typeof(Offset));
 
         int farmerCount = 0;
         while (farmerCount < initialFarmerCount)
@@ -158,7 +158,7 @@ public class SettingsAuthoring : MonoBehaviour, IConvertGameObjectToEntity
                 var pos = new float2(spawnPos.x + 0.5f, spawnPos.y + 0.5f);
                 var farmer = dstManager.CreateEntity(farmerArchetype);
                 dstManager.SetName(farmer, $"Farmer {farmerCount}");
-                dstManager.SetComponentData(farmer, new PositionF { Value = pos });
+                dstManager.SetComponentData(farmer, new Position { Value = pos });
                 dstManager.SetComponentData(farmer, new SmoothPosition { Value = pos });
                 farmerCount++;
             }

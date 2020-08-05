@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Entities;
-using Unity.Mathematics;
 
-public struct PositionF : IComponentData
+public struct StoreLookup : IBufferElementData
 {
-    public float2 Value;
+    public Entity Entity;
 }

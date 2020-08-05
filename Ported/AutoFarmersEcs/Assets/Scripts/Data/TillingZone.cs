@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 using Unity.Entities;
 using Unity.Mathematics;
 
-public struct Size : IComponentData
+public struct TillingZone : IComponentData
 {
-    public float2 Value;
+    public int2 Position;
+    public int2 Size;
 }
