@@ -8,30 +8,30 @@ using Unity.Entities;
 using Unity.Mathematics;
 
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup), OrderFirst = true)]
-public class StoreLookupSystem : SystemBase
+public class PlantLookupSystem : SystemBase
 {
-    struct StoreLookupData : ISystemStateComponentData
+    struct PlantLookupData : ISystemStateComponentData
     {
         public int2 Position;
     }
 
-    EntityQuery m_deletedStores;
+    EntityQuery m_deletedPlants;
     EntityCommandBufferSystem m_cmdBuffer;
 
     protected override void OnCreate()
     {
         base.OnCreate();
         RequireSingletonForUpdate<Settings>();
-        m_deletedStores = GetEntityQuery(new EntityQueryDesc() { All = new ComponentType[] { typeof(StoreLookupData) }, None = new ComponentType[] { typeof(StoreTag) }, });
+        m_deletedPlants = GetEntityQuery(new EntityQueryDesc() { All = new ComponentType[] { typeof(PlantLookupData) }, None = new ComponentType[] { typeof(PlantTag) }, });
 
-        EntityManager.AddBuffer<StoreLookup>(EntityManager.CreateEntity());
+        EntityManager.AddBuffer<PlantLookup>(EntityManager.CreateEntity());
         m_cmdBuffer = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
     }
 
     protected override void OnUpdate()
     {
         var mapSize = this.GetSettings().mapSize;
-        var lookup = EntityManager.AddBuffer<StoreLookup>(GetSingletonEntity<StoreLookup>());
+        var lookup = EntityManager.AddBuffer<PlantLookup>(GetSingletonEntity<PlantLookup>());
         if (lookup.Length == 0)
         {
             lookup.Length = mapSize.x * mapSize.y;
@@ -43,12 +43,12 @@ public class StoreLookupSystem : SystemBase
 
         var buffer = m_cmdBuffer.CreateCommandBuffer();
 
-        // Stores are immovable, change filter to update position not needed
+        // Plants are immovable, change filter to update position not needed
 
-        // Add new Stores
-        Entities.WithStructuralChanges().WithAll<StoreTag>().WithNone<StoreLookupData>().ForEach((Entity e, in Position position) =>
+        // Add new Plants
+        Entities.WithStructuralChanges().WithAll<PlantTag>().WithNone<PlantLookupData>().ForEach((Entity e, in Position position) =>
         {
-            StoreLookupData data;
+            PlantLookupData data;
             data.Position = (int2)position.Value;
             int index = data.Position.x + data.Position.y * mapSize.x;
             lookup.ElementAt(index).Entity = e;
@@ -56,14 +56,14 @@ public class StoreLookupSystem : SystemBase
         }).Run();
 
         // Remove from lookup
-        Entities.WithNone<StoreTag>().ForEach((Entity e, in StoreLookupData data) =>
+        Entities.WithNone<PlantTag>().ForEach((Entity e, in PlantLookupData data) =>
         {
             int index = data.Position.x + data.Position.y * mapSize.x;
             lookup.ElementAt(index).Entity = Entity.Null;
         }).Run();
 
         // Remove components
-        EntityManager.RemoveComponent(m_deletedStores, typeof(StoreLookupData));
+        EntityManager.RemoveComponent(m_deletedPlants, typeof(PlantLookupData));
 
         m_cmdBuffer.AddJobHandleForProducer(Dependency);
     }

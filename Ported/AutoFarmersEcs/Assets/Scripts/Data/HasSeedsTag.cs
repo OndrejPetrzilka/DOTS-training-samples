@@ -5,8 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Unity.Entities;
 
-public struct PlantTag : IComponentData
+public struct HasSeedsTag : IComponentData
 {
-    public int Seed;
-    public float Growth;
 }

@@ -84,6 +84,7 @@ public class FarmerTillGround : SystemBase
                 if (Random.value < .2f)
                 {
                     EntityManager.RemoveComponent(e, typeof(WorkTillGround));
+                    EntityManager.RemoveComponent(e, typeof(WorkTarget));
                 }
             }
         }).Run();
@@ -117,6 +118,7 @@ public class FarmerTillGround : SystemBase
             {
                 EntityManager.RemoveComponent(e, typeof(WorkTillGround));
                 EntityManager.RemoveComponent(e, typeof(TillingZone));
+                EntityManager.RemoveComponent(e, typeof(WorkTarget));
             }
         }).Run();
     }

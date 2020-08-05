@@ -5,8 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Unity.Entities;
 
-public struct PlantTag : IComponentData
+public struct PlantLookup : IBufferElementData
 {
-    public int Seed;
-    public float Growth;
+    public Entity Entity;
 }

@@ -31,7 +31,7 @@ public class FarmerDecision : SystemBase
             }
             else if (rand == 2)
             {
-                //EntityManager.AddComponent<WorkPlantSeeds>(e);
+                EntityManager.AddComponent<WorkPlantSeeds>(e);
             }
             else if (rand == 3)
             {
