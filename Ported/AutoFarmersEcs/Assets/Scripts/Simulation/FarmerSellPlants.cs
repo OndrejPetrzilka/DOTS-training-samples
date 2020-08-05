@@ -13,7 +13,9 @@ using Random = UnityEngine.Random;
 public class FarmerSellPlants : SystemBase
 {
     EntityQuery m_hasWork;
+    EntityQuery m_farmers;
     EntityArchetype m_plantArchetype;
+    EntityArchetype m_farmerArchetype;
 
     protected override void OnCreate()
     {
@@ -24,16 +26,21 @@ public class FarmerSellPlants : SystemBase
         RequireSingletonForUpdate<StoreLookup>();
         RequireSingletonForUpdate<PlantLookup>();
         m_hasWork = GetEntityQuery(typeof(WorkSellPlants));
+        m_farmers = GetEntityQuery(typeof(FarmerTag));
         m_plantArchetype = EntityManager.CreateArchetype(typeof(PlantTag), typeof(Position));
+        m_farmerArchetype = EntityManager.CreateArchetype(typeof(FarmerTag), typeof(Position), typeof(SmoothPosition), typeof(Offset));
     }
 
     protected override void OnUpdate()
     {
         var settings = this.GetSettings();
         var mapSize = settings.mapSize;
+        var maxFarmerCount = settings.maxFarmerCount;
 
         var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
         var plants = this.GetSingleton<PlantLookup>();
+
+        // TODO: Use command buffer
 
         // Does not carry plant, find plant
         Entities.WithStructuralChanges().WithAll<FarmerTag, WorkSellPlants>().WithNone<CarryingPlant, WorkTarget>().ForEach((Entity e, in Position position) =>
@@ -116,12 +123,25 @@ public class FarmerSellPlants : SystemBase
             }
         }).Run();
 
+        int farmerCount = m_farmers.CalculateEntityCount();
+
         // Reached target
         Entities.WithStructuralChanges().WithAll<WorkSellPlants, CarryingPlant, WorkTarget>().WithNone<PathData>().ForEach((Entity e, in WorkTarget target, in Position position) =>
         {
             // Sell plant
 
             // TODO: Get money and add new farmer / drone
+            // TODO: One farmer per 10 plants
+            // TODO: Must use command buffer, otherwise there's too much invalidated data
+            //if (farmerCount < maxFarmerCount)
+            //{
+            //    var pos = position.Value;
+            //    var farmer = EntityManager.CreateEntity(m_farmerArchetype);
+            //    EntityManager.SetName(farmer, $"Farmer {farmerCount}");
+            //    EntityManager.SetComponentData(farmer, new Position { Value = pos });
+            //    EntityManager.SetComponentData(farmer, new SmoothPosition { Value = pos });
+            //    farmerCount++;
+            //}
 
             // Remove target
             EntityManager.RemoveComponent(e, typeof(WorkTarget));

@@ -76,23 +76,26 @@ public class FarmerClearRocks : SystemBase
         Entities.WithStructuralChanges().WithAll<FarmerTag, WorkClearRocks>().WithNone<PathData>().ForEach((Entity e, in WorkTarget target) =>
         {
             // Attack rock
-            var rockPosition = EntityManager.GetComponentData<Position>(target.Value).Value;
-
             int health = 0;
-            if (target.Value != Entity.Null)
+            if (EntityManager.Exists(target.Value))
             {
-                health = EntityManager.GetComponentData<Health>(target.Value).Value - 1;
-                EntityManager.SetComponentData(target.Value, new Health { Value = health });
-                if (health <= 0)
+                var rockPosition = EntityManager.GetComponentData<Position>(target.Value).Value;
+
+                if (target.Value != Entity.Null)
                 {
-                    EntityManager.DestroyEntity(target.Value);
+                    health = EntityManager.GetComponentData<Health>(target.Value).Value - 1;
+                    EntityManager.SetComponentData(target.Value, new Health { Value = health });
+                    if (health <= 0)
+                    {
+                        EntityManager.DestroyEntity(target.Value);
+                    }
                 }
+
+                var pos = EntityManager.GetComponentData<SmoothPosition>(e).Value;
+                Offset offset = default;
+                offset.Value = math.normalizesafe(rockPosition - pos) * 0.5f * Random.value;
+                EntityManager.SetComponentData(e, offset);
             }
-            
-            var pos = EntityManager.GetComponentData<SmoothPosition>(e).Value;
-            Offset offset = default;
-            offset.Value = math.normalizesafe(rockPosition - pos) * 0.5f * Random.value;
-            EntityManager.SetComponentData(e, offset);
             if (health <= 0)
             {
                 EntityManager.RemoveComponent<WorkClearRocks>(e);
