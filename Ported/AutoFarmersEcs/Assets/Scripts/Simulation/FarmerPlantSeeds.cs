@@ -32,7 +32,6 @@ public class FarmerPlantSeeds : SystemBase
         var settings = this.GetSettings();
         var mapSize = settings.mapSize;
 
-        var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
         var rocks = this.GetSingleton<RockLookup>();
         var stores = this.GetSingleton<StoreLookup>();
         var plants = this.GetSingleton<PlantLookup>();
@@ -79,8 +78,7 @@ public class FarmerPlantSeeds : SystemBase
 
         }).Run();
 
-        // In job below it was invalid wihout this refresh, not sure why
-        stores = this.GetSingleton<StoreLookup>();
+        var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
 
         // Has seeds, does not have target
         Entities.WithStructuralChanges().WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithNone<WorkTarget>().ForEach((Entity e, in Position position) =>
@@ -88,7 +86,7 @@ public class FarmerPlantSeeds : SystemBase
             // Find closest tilled ground
             float distSq = float.MaxValue;
             int2 target = new int2(-1, -1);
-            for (int i = 0; i < stores.Length; i++)
+            for (int i = 0; i < ground.Length; i++)
             {
                 int2 pos = new int2(i % mapSize.x, i / mapSize.x);
                 float newDistSq = math.lengthsq(position.Value - pos);
@@ -124,7 +122,7 @@ public class FarmerPlantSeeds : SystemBase
             if (plants[tile.x + tile.y * mapSize.x].Entity == Entity.Null)
             {
                 // Spawn plant
-                int seed = Mathf.FloorToInt(Mathf.PerlinNoise(tile.x / 10f, tile.y / 10f) * 10);
+                int seed = Mathf.FloorToInt(Mathf.PerlinNoise(tile.x / 10f, tile.y / 10f) * 10) + 317281687;
 
                 var plant = EntityManager.CreateEntity(m_plantArchetype);
                 EntityManager.SetComponentData(plant, new PlantTag { Seed = 0, Growth = 0 });
