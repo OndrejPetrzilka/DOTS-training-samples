@@ -7,6 +7,10 @@
 //using Unity.Entities;
 //using Unity.Mathematics;
 
+// ISSUES:
+// Cannot use Entities.ForEach in generic system
+// IJobChunk, some problems with ComponentTypeHandle not disposing or something
+
 //[assembly: RegisterGenericComponentType(typeof(Lookup<RockTag>))]
 //[assembly: RegisterGenericComponentType(typeof(Lookup<PlantTag>))]
 //[assembly: RegisterGenericComponentType(typeof(Lookup<StoreTag>))]
