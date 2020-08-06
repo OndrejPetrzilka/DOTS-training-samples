@@ -16,6 +16,9 @@ public class FarmerSellPlants : SystemBase
     EntityQuery m_farmers;
     EntityArchetype m_plantArchetype;
     EntityArchetype m_farmerArchetype;
+    EntityCommandBufferSystem m_cmdBufferSystem;
+
+    int m_money;
 
     protected override void OnCreate()
     {
@@ -29,6 +32,7 @@ public class FarmerSellPlants : SystemBase
         m_farmers = GetEntityQuery(typeof(FarmerTag));
         m_plantArchetype = EntityManager.CreateArchetype(typeof(PlantTag), typeof(Position));
         m_farmerArchetype = EntityManager.CreateArchetype(typeof(FarmerTag), typeof(Position), typeof(SmoothPosition), typeof(Offset));
+        m_cmdBufferSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
     }
 
     protected override void OnUpdate()
@@ -126,32 +130,36 @@ public class FarmerSellPlants : SystemBase
         int farmerCount = m_farmers.CalculateEntityCount();
 
         // Reached target
+        var cmdBuffer = m_cmdBufferSystem.CreateCommandBuffer();
         Entities.WithStructuralChanges().WithAll<WorkSellPlants, CarryingPlant, WorkTarget>().WithNone<PathData>().ForEach((Entity e, in WorkTarget target, in Position position) =>
         {
             // Sell plant
 
             // TODO: Get money and add new farmer / drone
-            // TODO: One farmer per 10 plants
-            // TODO: Must use command buffer, otherwise there's too much invalidated data
-            //if (farmerCount < maxFarmerCount)
-            //{
-            //    var pos = position.Value;
-            //    var farmer = EntityManager.CreateEntity(m_farmerArchetype);
-            //    EntityManager.SetName(farmer, $"Farmer {farmerCount}");
-            //    EntityManager.SetComponentData(farmer, new Position { Value = pos });
-            //    EntityManager.SetComponentData(farmer, new SmoothPosition { Value = pos });
-            //    farmerCount++;
-            //}
+            m_money++;
+            if (farmerCount < maxFarmerCount && m_money >= 10)
+            {
+                m_money -= 10;
+
+                var pos = position.Value;
+                var farmer = cmdBuffer.CreateEntity(m_farmerArchetype);
+                //cmdBuffer.SetName(farmer, $"Farmer {farmerCount}");
+                cmdBuffer.SetComponent(farmer, new Position { Value = pos });
+                cmdBuffer.SetComponent(farmer, new SmoothPosition { Value = pos });
+                farmerCount++;
+            }
 
             // Remove target
-            EntityManager.RemoveComponent(e, typeof(WorkTarget));
-            EntityManager.RemoveComponent(e, typeof(CarryingPlant));
+            cmdBuffer.RemoveComponent(e, typeof(WorkTarget));
+            cmdBuffer.RemoveComponent(e, typeof(CarryingPlant));
 
             // Choose other work
             if (Random.value < 0.1f)
             {
-                EntityManager.RemoveComponent(e, typeof(WorkSellPlants));
+                cmdBuffer.RemoveComponent(e, typeof(WorkSellPlants));
             }
         }).Run();
+
+        m_cmdBufferSystem.AddJobHandleForProducer(Dependency);
     }
 }
