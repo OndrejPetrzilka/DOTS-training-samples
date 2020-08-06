@@ -23,6 +23,6 @@ public class FarmerMovement : SystemBase
         Entities.ForEach((Entity e, ref SmoothPosition smoothPosition, in Position position) =>
         {
             smoothPosition.Value = math.lerp(smoothPosition.Value, position.Value, moveSmooth);
-        }).Run();
+        }).ScheduleParallel();
     }
 }

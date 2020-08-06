@@ -23,6 +23,6 @@ public class PlantGrowth : SystemBase
         Entities.ForEach((Entity e, ref PlantTag plant) =>
         {
             plant.Growth = Mathf.Min(plant.Growth + deltaTime / 10f, 1f);
-        }).Run();
+        }).ScheduleParallel();
     }
 }
