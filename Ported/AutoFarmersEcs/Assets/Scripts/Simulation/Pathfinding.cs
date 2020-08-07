@@ -9,7 +9,7 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 
 // PATHFINDING
-// 1) Closest store, closest rock, closest unreserved grown plant, closest empty field
+// 1) Store, Rock, Unreserved grown plant, Tilled field with no plant
 // 2) Around rocks (farmer), over rocks (drone)
 // 3) Tile states: empty, rock, tilled, plant
 
@@ -18,6 +18,11 @@ using Random = UnityEngine.Random;
 // 2) Go through walkable neighbors, A*
 // 3) Must know whether tile is walkable
 // 4) Must know whether tile is possible target
+
+// IMPLEMENTATION
+// 1) Walkable bits - bit field, one bit per agent type
+// 2) Lookup for tile contents - main object type index + 6 object bits + 2 ground bits
+//    - TypeManager.GetTypeIndex<RockTag>();
 
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class Pathfinding : SystemBase
