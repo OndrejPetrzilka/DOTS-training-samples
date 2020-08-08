@@ -92,7 +92,7 @@ public class FarmerPlantSeeds : SystemBase
                 float newDistSq = math.lengthsq(position.Value - pos);
                 if (newDistSq < distSq)
                 {
-                    if (ground[i].State == GroundState.Tilled && plants[i].Entity == Entity.Null)
+                    if (ground[i].IsTilled && plants[i].Entity == Entity.Null)
                     {
                         target = pos;
                         distSq = newDistSq;

@@ -8,5 +8,9 @@ using Unity.Entities;
 public struct Ground : IBufferElementData
 {
     public float Till;
-    public GroundState State;
+
+    public bool IsTilled
+    {
+        get { return Till > 0.5f; }
+    }
 }

@@ -81,7 +81,7 @@ public class SettingsAuthoring : MonoBehaviour, IConvertGameObjectToEntity
         buffer.Length = mapSize.x * mapSize.y;
         for (int i = 0; i < buffer.Length; i++)
         {
-            buffer[i] = new Ground { State = GroundState.Default, Till = Random.value * 0.2f };
+            buffer[i] = new Ground { Till = Random.value * 0.2f };
         }
 
         // Stores

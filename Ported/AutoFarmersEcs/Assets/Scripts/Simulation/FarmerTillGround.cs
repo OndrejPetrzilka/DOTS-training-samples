@@ -55,12 +55,6 @@ public class FarmerTillGround : SystemBase
                 {
                     int index = x + y * mapSize.x;
 
-                    GroundState groundState = ground[index].State;
-                    if (groundState != GroundState.Default && groundState != GroundState.Tilled)
-                    {
-                        blocked = true;
-                        break;
-                    }
                     if (rocks[index].Entity != Entity.Null || stores[index].Entity != Entity.Null)
                     {
                         blocked = true;
@@ -104,9 +98,9 @@ public class FarmerTillGround : SystemBase
             int2 tile = (int2)math.floor(position.Value);
             int index = tile.x + tile.y * mapSize.x;
 
-            if (ground[index].State == GroundState.Default)
+            if (!ground[index].IsTilled)
             {
-                ground.ElementAt(index) = new Ground() { State = GroundState.Tilled, Till = Random.Range(0.8f, 1) };
+                ground.ElementAt(index) = new Ground() { Till = Random.Range(0.8f, 1) };
             }
 
             if (TryFindNextTile(zone, mapSize, ground, out int2 newTile))
@@ -132,7 +126,7 @@ public class FarmerTillGround : SystemBase
             for (int y = zone.Position.y; y <= end.y; y++)
             {
                 int newIndex = x + y * mapSize.x;
-                if (ground[newIndex].State == GroundState.Default)
+                if (!ground[newIndex].IsTilled)
                 {
                     result = new int2(x, y);
                     return true;
