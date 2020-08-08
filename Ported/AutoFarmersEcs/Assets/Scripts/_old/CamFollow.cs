@@ -12,6 +12,7 @@ public class CamFollow : MonoBehaviour
     public float mouseSensitivity;
 
     public bool freeCamera = false;
+    public bool rotate = false;
     public float moveSpeed = 1;
     public float zoomSpeed = 1;
 
@@ -72,8 +73,11 @@ public class CamFollow : MonoBehaviour
         }
 
         transform.rotation = Quaternion.Euler(viewAngles.y, viewAngles.x, 0f);
-        viewAngles.x += Input.GetAxis("Mouse X") * mouseSensitivity / Screen.height;
-        viewAngles.y -= Input.GetAxis("Mouse Y") * mouseSensitivity / Screen.height;
+        if (rotate)
+        {
+            viewAngles.x += Input.GetAxis("Mouse X") * mouseSensitivity / Screen.height;
+            viewAngles.y -= Input.GetAxis("Mouse Y") * mouseSensitivity / Screen.height;
+        }
         viewAngles.y = Mathf.Clamp(viewAngles.y, 7f, 80f);
         viewAngles.x -= Mathf.Floor(viewAngles.x / 360f) * 360f;
     }
