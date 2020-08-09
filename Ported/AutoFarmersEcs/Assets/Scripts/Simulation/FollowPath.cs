@@ -22,16 +22,23 @@ public class FollowPath : SystemBase
         float walkSpeed = 4;
         float deltaTime = Time.fixedDeltaTime;
 
-        Entities.WithStructuralChanges().ForEach((Entity e, DynamicBuffer<PathData> path, ref Position position) =>
+        Entities.WithStructuralChanges().WithNone<PathFinished>().ForEach((Entity e, DynamicBuffer<PathData> path, ref Position position) =>
         {
             int2 pos = (int2)math.floor(position.Value);
             if (path.Length == 0)
             {
-                EntityManager.RemoveComponent<PathData>(e);
+                EntityManager.AddComponent<PathFinished>(e);
             }
             else if (math.all(path[path.Length - 1].Position == pos))
             {
-                path.RemoveAt(path.Length - 1);
+                if (path.Length == 1)
+                {
+                    EntityManager.AddComponent<PathFinished>(e);
+                }
+                else
+                {
+                    path.RemoveAt(path.Length - 1);
+                }
             }
             else
             {
