@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
 // PATHFINDING
-// 1) Store, Rock, Unreserved grown plant, Tilled field with no plant
+// 1) Rock, Store, Normal ground, Tilled ground (no plant), Grown plant
 // 2) Around rocks (farmer), over rocks (drone)
 // 3) Tile states: empty, rock, tilled, plant
 
@@ -28,6 +29,7 @@ using Random = UnityEngine.Random;
 public class Pathfinding : SystemBase
 {
     EntityCommandBufferSystem m_cmdSystem;
+    EntityQuery m_hasPath;
 
     protected override void OnCreate()
     {
@@ -40,10 +42,18 @@ public class Pathfinding : SystemBase
     {
         var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
 
-        Entities.WithNone<PathData>().ForEach((Entity e, int entityInQueryIndex, in FindPath search, in Position position) =>
+        var mapSize = this.GetSettings().mapSize;
+        var ground = GetSingletonEntity<Ground>();
+        var lookup = GetSingletonEntity<LookupData>();
+        int nonWalkableComponentIndex = TypeManager.GetTypeIndex<RockTag>();
+        BufferFromEntity<Ground> groundArray = GetBufferFromEntity<Ground>(true);
+        BufferFromEntity<LookupData> lookupDataArray = GetBufferFromEntity<LookupData>(true);
+
+        Entities.WithoutBurst().WithReadOnly(lookupDataArray).WithReadOnly(groundArray).WithNone<PathData>().ForEach((Entity e, int entityInQueryIndex, in FindPath search, in Position position) =>
         {
-            
-        }).ScheduleParallel();
+            PathHelper.FindPath(groundArray[ground], lookupDataArray[lookup], (int2)position.Value, mapSize, nonWalkableComponentIndex, search, cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e));
+            cmdBuffer.RemoveComponent<FindPath>(entityInQueryIndex, e);
+        }).Schedule();
 
         m_cmdSystem.AddJobHandleForProducer(Dependency);
     }
