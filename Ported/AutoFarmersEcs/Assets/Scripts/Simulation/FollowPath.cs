@@ -11,12 +11,6 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class FollowPath : SystemBase
 {
-    protected override void OnCreate()
-    {
-        base.OnCreate();
-        RequireSingletonForUpdate<Settings>();
-    }
-
     protected override void OnUpdate()
     {
         float walkSpeed = 4;

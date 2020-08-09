@@ -29,7 +29,6 @@ using Random = UnityEngine.Random;
 public class Pathfinding : SystemBase
 {
     EntityCommandBufferSystem m_cmdSystem;
-    EntityQuery m_hasPath;
 
     protected override void OnCreate()
     {
@@ -48,10 +47,19 @@ public class Pathfinding : SystemBase
         int nonWalkableComponentIndex = TypeManager.GetTypeIndex<RockTag>();
         BufferFromEntity<Ground> groundArray = GetBufferFromEntity<Ground>(true);
         BufferFromEntity<LookupData> lookupDataArray = GetBufferFromEntity<LookupData>(true);
+        BufferFromEntity<LookupEntity> lookupEntityArray = GetBufferFromEntity<LookupEntity>(true);
 
+        // PathHelper uses NativeQueue, which is not compatible with Burst
         Entities.WithoutBurst().WithReadOnly(lookupDataArray).WithReadOnly(groundArray).WithNone<PathData>().ForEach((Entity e, int entityInQueryIndex, in FindPath search, in Position position) =>
         {
-            PathHelper.FindPath(groundArray[ground], lookupDataArray[lookup], (int2)position.Value, mapSize, nonWalkableComponentIndex, search, cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e));
+            var buffer = cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e);
+            PathHelper.FindPath(groundArray[ground], lookupDataArray[lookup], (int2)position.Value, mapSize, nonWalkableComponentIndex, search, buffer);
+            if (buffer.Length > 0)
+            {
+                var targetPos = (int2)buffer[0].Position;
+                var target = lookupEntityArray[lookup][targetPos.x + targetPos.y * mapSize.x].Entity;
+                cmdBuffer.AddComponent(entityInQueryIndex, e, new PathTarget { Entity = target });
+            }
             cmdBuffer.RemoveComponent<FindPath>(entityInQueryIndex, e);
         }).Schedule();
 
