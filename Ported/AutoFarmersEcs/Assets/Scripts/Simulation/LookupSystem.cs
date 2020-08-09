@@ -44,10 +44,19 @@ public class LookupSystem : SystemBase
 
         // TODO: Change monitoring for: Position, Size, LookupComponent
 
+        var entityLookup = GetBufferFromEntity<LookupEntity>(false);
+        var entityLookupData = GetBufferFromEntity<LookupData>(false);
+
+        // Remove deleted
+        Entities.WithNone<LookupComponent>().ForEach((Entity e, in LookupInternalData data) =>
+        {
+            SetLookupData(entityLookup[singleton], entityLookupData[singleton], Entity.Null, default, data.Position, data.Size, mapSize.x);
+        }).Run();
+
         // Remove components
         EntityManager.RemoveComponent(m_deletedQuery, typeof(LookupInternalData));
 
-        BufferFromEntity<LookupData> entityLookupData = GetBufferFromEntity<LookupData>(false);
+        entityLookupData = GetBufferFromEntity<LookupData>(false);
         ComponentDataFromEntity<Size> sizes = GetComponentDataFromEntity<Size>(true);
 
         // Handle changed LookupComponentFilters
@@ -59,7 +68,7 @@ public class LookupSystem : SystemBase
             SetLookupFilter(entityLookupData[singleton], element, (int2)position.Value, size, mapSize.x);
         }).Schedule();
 
-        BufferFromEntity<LookupEntity> entityLookup = GetBufferFromEntity<LookupEntity>(false);
+        entityLookup = GetBufferFromEntity<LookupEntity>(false);
         ComponentDataFromEntity<LookupComponentFilters> filters = GetComponentDataFromEntity<LookupComponentFilters>(true);
         entityLookupData = GetBufferFromEntity<LookupData>(false);
         sizes = GetComponentDataFromEntity<Size>(true);
@@ -75,15 +84,6 @@ public class LookupSystem : SystemBase
             LookupInternalData data = new LookupInternalData { Position = (int2)position.Value, Size = size };
             SetLookupData(entityLookup[singleton], entityLookupData[singleton], e, element, data.Position, data.Size, mapSize.x);
             cmdBuffer.AddComponent(e, data);
-        }).Schedule();
-
-        entityLookup = GetBufferFromEntity<LookupEntity>(false);
-        entityLookupData = GetBufferFromEntity<LookupData>(false);
-
-        // Remove deleted
-        Entities.WithNone<LookupComponent>().ForEach((Entity e, in LookupInternalData data) =>
-        {
-            SetLookupData(entityLookup[singleton], entityLookupData[singleton], Entity.Null, default, data.Position, data.Size, mapSize.x);
         }).Schedule();
 
         m_cmdSystem.AddJobHandleForProducer(Dependency);
