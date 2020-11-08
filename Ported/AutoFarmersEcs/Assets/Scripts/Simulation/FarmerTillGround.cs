@@ -96,7 +96,6 @@ public class FarmerTillGround : SystemBase
         }).Schedule();
 
         // Reached target
-        var cmdBuffer2 = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
         var finishedWorkComponents = m_finishedWorkComponents;
 
         Entities.WithAll<FarmerTag, WorkTillGround, PathFinished>().ForEach((Entity e, int entityInQueryIndex, ref RandomState rng, in TillingZone zone, in Position position) =>
@@ -120,19 +119,19 @@ public class FarmerTillGround : SystemBase
 
             if (TryFindNextTile(zone, mapSize, ground, out int2 newTile))
             {
-                var buffer = cmdBuffer2.AddBuffer<PathData>(entityInQueryIndex, e);
+                var buffer = cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e);
                 buffer.Length = 0;
                 buffer.Add(new PathData { Position = newTile });
 
-                cmdBuffer2.RemoveComponent<PathFinished>(entityInQueryIndex, e);
+                cmdBuffer.RemoveComponent<PathFinished>(entityInQueryIndex, e);
             }
             else
             {
-                cmdBuffer2.RemoveComponent(entityInQueryIndex, e, finishedWorkComponents);
+                cmdBuffer.RemoveComponent(entityInQueryIndex, e, finishedWorkComponents);
             }
         }).Schedule();
 
-        Dependency.Complete();
+        m_cmdSystem.AddJobHandleForProducer(Dependency);
     }
 
     private static bool TryFindNextTile(TillingZone zone, int2 mapSize, DynamicBuffer<Ground> ground, out int2 result)

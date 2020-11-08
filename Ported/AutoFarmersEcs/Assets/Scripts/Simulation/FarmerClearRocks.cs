@@ -78,5 +78,7 @@ public class FarmerClearRocks : SystemBase
                 cmdBuffer.RemoveComponent(entityInQueryIndex, e, jobFinishedTypes);
             }
         }).Schedule();
+
+        m_cmdSystem.AddJobHandleForProducer(Dependency);
     }
 }

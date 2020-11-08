@@ -82,5 +82,7 @@ public class FarmerPlantSeeds : SystemBase
                 cmdBuffer.RemoveComponent<WorkPlantSeeds>(entityInQueryIndex, e);
             }
         }).Schedule();
+
+        m_cmdSystem.AddJobHandleForProducer(Dependency);
     }
 }
