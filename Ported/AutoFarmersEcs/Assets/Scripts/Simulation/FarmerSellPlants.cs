@@ -80,7 +80,7 @@ public class FarmerSellPlants : SystemBase
         }).Run();
 
         // Does not carry plant, reached target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkSellPlants>().WithNone<CarryingPlant, PathData>().ForEach((Entity e, in WorkTarget target, in Position position) =>
+        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkSellPlants, PathFinished>().WithNone<CarryingPlant>().ForEach((Entity e, in WorkTarget target, in Position position) =>
         {
             // Carry plant
             if (EntityManager.Exists(target.Value))
@@ -131,7 +131,7 @@ public class FarmerSellPlants : SystemBase
 
         // Reached target
         var cmdBuffer = m_cmdBufferSystem.CreateCommandBuffer();
-        Entities.WithStructuralChanges().WithAll<WorkSellPlants, CarryingPlant, WorkTarget>().WithNone<PathData>().ForEach((Entity e, in WorkTarget target, in Position position) =>
+        Entities.WithStructuralChanges().WithAll<WorkSellPlants, CarryingPlant, WorkTarget>().WithAll<PathFinished>().ForEach((Entity e, in WorkTarget target, in Position position) =>
         {
             // Sell plant
 
