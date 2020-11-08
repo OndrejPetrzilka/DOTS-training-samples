@@ -44,11 +44,12 @@ public struct PathHelper
     private void Search()
     {
         NativeArray<ushort> marks = new NativeArray<ushort>(MapSize.x * MapSize.y, Allocator.Temp);
-        NativeQueue<int3> openQueue = new NativeQueue<int3>(Allocator.Temp);
-        openQueue.Enqueue(new int3(StartPosition, 1));
+        NativeList<int3> openQueue1 = new NativeList<int3>(32, Allocator.Temp);
+        NativeList<int3> openQueue2 = new NativeList<int3>(32, Allocator.Temp);
+        openQueue1.Add(new int3(StartPosition, 1));
         marks[GetIndex(StartPosition)] = 1;
 
-        if (FindTarget(openQueue, marks, out int2 position, out int distance))
+        if (FindTarget(openQueue1, openQueue2, marks, out int2 position, out int distance))
         {
             Path.Length = 0;
             Path.Capacity = distance - 1;
@@ -68,7 +69,8 @@ public struct PathHelper
                 }
             }
         }
-        openQueue.Dispose();
+        openQueue1.Dispose();
+        openQueue2.Dispose();
         marks.Dispose();
     }
 
@@ -87,33 +89,43 @@ public struct PathHelper
         return false;
     }
 
-    private bool FindTarget(NativeQueue<int3> openQueue, NativeArray<ushort> marks, out int2 position, out int distance)
+    private bool FindTarget(NativeList<int3> openQueue1, NativeList<int3> openQueue2, NativeArray<ushort> marks, out int2 position, out int distance)
     {
         // 1) Dequeue open list
         // 2) If target - break
         // 3) For each neighbour
         // 4) - if walkable and not marked, mark it and Enqueue to open list
-        while (openQueue.TryDequeue(out int3 item))
+        while (openQueue1.Length > 0)
         {
-            int index = GetIndex(item.xy);
-            if (IsTarget(index))
+            // Process openQueue1, write neighbours to openQueue2
+            for (int i = 0; i < openQueue1.Length; i++)
             {
-                position = item.xy;
-                distance = item.z;
-                return true;
+                var item = openQueue1[i];
+                int index = GetIndex(item.xy);
+                if (IsTarget(index))
+                {
+                    position = item.xy;
+                    distance = item.z;
+                    return true;
+                }
+
+                AddNeighbour(openQueue2, marks, item, new int2(1, 0));
+                AddNeighbour(openQueue2, marks, item, new int2(-1, 0));
+                AddNeighbour(openQueue2, marks, item, new int2(0, 1));
+                AddNeighbour(openQueue2, marks, item, new int2(0, -1));
             }
 
-            AddNeighbour(openQueue, marks, item, new int2(1, 0));
-            AddNeighbour(openQueue, marks, item, new int2(-1, 0));
-            AddNeighbour(openQueue, marks, item, new int2(0, 1));
-            AddNeighbour(openQueue, marks, item, new int2(0, -1));
+            openQueue1.Clear();
+            var tmp = openQueue1;
+            openQueue1 = openQueue2;
+            openQueue2 = tmp;
         }
         position = default;
         distance = default;
         return false;
     }
 
-    private void AddNeighbour(NativeQueue<int3> openQueue, NativeArray<ushort> marks, int3 item, int2 offset)
+    private void AddNeighbour(NativeList<int3> openQueue, NativeArray<ushort> marks, int3 item, int2 offset)
     {
         item.xy += offset;
         item.z++;
@@ -126,7 +138,7 @@ public struct PathHelper
                 if (IsTarget(index) || IsWalkable(index))
                 {
                     marks[index] = (ushort)item.z;
-                    openQueue.Enqueue(item);
+                    openQueue.Add(item);
                 }
             }
         }
