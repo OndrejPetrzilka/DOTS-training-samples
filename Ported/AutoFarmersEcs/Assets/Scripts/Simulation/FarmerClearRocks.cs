@@ -16,9 +16,14 @@ public class FarmerClearRocks : SystemBase
     EntityQuery m_needsPath;
     EntityQuery m_noTarget;
 
+    EntityCommandBufferSystem m_cmdSystem;
+
     protected override void OnCreate()
     {
         base.OnCreate();
+
+        m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
+
         RequireSingletonForUpdate<Settings>();
         m_rocks = Query.WithAll<RockTag>();
         m_needsPath = Query.WithAll<FarmerTag, WorkClearRocks>().WithNone<FindPath, PathData>();
@@ -42,33 +47,36 @@ public class FarmerClearRocks : SystemBase
         // Remove work when there's no target
         EntityManager.RemoveComponent<WorkClearRocks>(m_noTarget);
 
+        var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+
+        var positions = GetComponentDataFromEntity<Position>(true);
+        var healths = GetComponentDataFromEntity<Health>(false);
+
+        var jobFinishedTypes = new ComponentTypes(typeof(WorkClearRocks), typeof(PathFinished), typeof(PathData), typeof(PathTarget));
+
         // Reached target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkClearRocks, PathFinished>().ForEach((Entity e, DynamicBuffer<PathData> path, in PathTarget target) =>
+        Entities.WithAll<FarmerTag, WorkClearRocks, PathFinished>().WithReadOnly(positions).ForEach((Entity e, int entityInQueryIndex, DynamicBuffer<PathData> path, ref Offset offset, ref RandomState rng, in SmoothPosition smoothPosition, in PathTarget target) =>
         {
             // Attack rock
-            int health = 0;
-            if (EntityManager.Exists(target.Entity))
+            Health health = default;
+            if (positions.HasComponent(target.Entity))
             {
-                var rockPosition = EntityManager.GetComponentData<Position>(target.Entity).Value;
-                health = EntityManager.GetComponentData<Health>(target.Entity).Value - 1;
-                EntityManager.SetComponentData(target.Entity, new Health { Value = health });
-                if (health <= 0)
+                var rockPosition = positions[target.Entity].Value;
+                health = healths[target.Entity];
+                health.Value -= 1;
+                healths[target.Entity] = health;
+
+                if (health.Value <= 0)
                 {
-                    EntityManager.DestroyEntity(target.Entity);
+                    cmdBuffer.DestroyEntity(entityInQueryIndex, target.Entity);
                 }
 
-                var pos = EntityManager.GetComponentData<SmoothPosition>(e).Value;
-                Offset offset = default;
-                offset.Value = math.normalizesafe(rockPosition - pos) * 0.5f * Random.value;
-                EntityManager.SetComponentData(e, offset);
+                offset.Value = math.normalizesafe(rockPosition - smoothPosition.Value) * 0.5f * rng.Rng.NextFloat();
             }
-            if (health <= 0)
+            if (health.Value <= 0)
             {
-                EntityManager.RemoveComponent<WorkClearRocks>(e);
-                EntityManager.RemoveComponent<PathFinished>(e);
-                EntityManager.RemoveComponent<PathData>(e);
-                EntityManager.RemoveComponent<PathTarget>(e);
+                cmdBuffer.RemoveComponent(entityInQueryIndex, e, jobFinishedTypes);
             }
-        }).Run();
+        }).Schedule();
     }
 }
