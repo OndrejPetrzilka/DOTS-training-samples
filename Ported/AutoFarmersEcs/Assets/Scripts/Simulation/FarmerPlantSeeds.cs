@@ -12,8 +12,15 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class FarmerPlantSeeds : SystemBase
 {
+    struct BuyingSeedsTag : IComponentData
+    {
+    }
+
+    EntityCommandBufferSystem m_cmdSystem;
     EntityArchetype m_plantArchetype;
     EntityQuery m_needsSeeds;
+    EntityQuery m_buySeeds;
+    EntityQuery m_buyingSeeds;
     EntityQuery m_needsPlantTarget;
 
     protected override void OnCreate()
@@ -21,8 +28,11 @@ public class FarmerPlantSeeds : SystemBase
         base.OnCreate();
         RequireSingletonForUpdate<Settings>();
         RequireSingletonForUpdate<LookupData>();
+        m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
         m_plantArchetype = EntityManager.CreateArchetype(typeof(PlantTag), typeof(Position));
         m_needsSeeds = Query.WithAll<FarmerTag, WorkPlantSeeds>().WithNone<HasSeedsTag, PathTarget>();
+        m_buySeeds = Query.WithAll<FarmerTag, WorkPlantSeeds, PathFinished>().WithNone<HasSeedsTag>();
+        m_buyingSeeds = Query.WithAll<FarmerTag, BuyingSeedsTag>();
         m_needsPlantTarget = Query.WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithNone<PathTarget>();
     }
 
@@ -34,16 +44,9 @@ public class FarmerPlantSeeds : SystemBase
         // Go to store to buy seeds
         this.AddComponentData(m_needsSeeds, FindPath.Create<StoreTag>());
 
-        // Does not have seeds, reached target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkPlantSeeds, PathFinished>().WithNone<HasSeedsTag>().ForEach((Entity e) =>
-        {
-            // Buy seeds, remove target
-            EntityManager.AddComponent<HasSeedsTag>(e);
-            EntityManager.RemoveComponent<PathFinished>(e);
-            EntityManager.RemoveComponent<PathData>(e);
-            EntityManager.RemoveComponent<PathTarget>(e);
-
-        }).Run();
+        // Does not have seeds, reached target, buy seeds
+        EntityManager.AddComponent(m_buySeeds, new ComponentTypes(typeof(BuyingSeedsTag), typeof(HasSeedsTag)));
+        EntityManager.RemoveComponent(m_buyingSeeds, new ComponentTypes(new ComponentType[] { typeof(BuyingSeedsTag), typeof(PathFinished), typeof(PathData), typeof(PathTarget) }));
 
         // Find plant target
         this.AddComponentData(m_needsPlantTarget, new FindPath(-1, 0, FindPathFlags.UseGroundState | FindPathFlags.GroundStateTilled));
@@ -51,7 +54,10 @@ public class FarmerPlantSeeds : SystemBase
         var lookup = this.GetSingleton<LookupData>();
 
         // Reached target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithAll<PathFinished>().ForEach((Entity e, in Position position) =>
+        var plantArchetype = m_plantArchetype;
+        var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+        var planedComponentTypes = new ComponentTypes(typeof(PathFinished), typeof(PathData), typeof(PathTarget));
+        Entities.WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithAll<PathFinished>().ForEach((Entity e, int entityInQueryIndex, ref RandomState rng, in Position position) =>
         {
             // Plant seeds
             int2 tile = (int2)math.floor(position.Value);
@@ -62,21 +68,19 @@ public class FarmerPlantSeeds : SystemBase
                 // Spawn plant
                 int seed = Mathf.FloorToInt(Mathf.PerlinNoise(tile.x / 10f, tile.y / 10f) * 10) + 317281687;
 
-                var plant = EntityManager.CreateEntity(m_plantArchetype);
-                EntityManager.SetComponentData(plant, new PlantTag { Seed = 0, Growth = 0 });
-                EntityManager.SetComponentData(plant, new Position { Value = tile });
+                var plant = cmdBuffer.CreateEntity(entityInQueryIndex, plantArchetype);
+                cmdBuffer.SetComponent(entityInQueryIndex, plant, new PlantTag { Seed = 0, Growth = 0 });
+                cmdBuffer.SetComponent(entityInQueryIndex, plant, new Position { Value = tile });
             }
 
             // Remove target
-            EntityManager.RemoveComponent<PathFinished>(e);
-            EntityManager.RemoveComponent<PathData>(e);
-            EntityManager.RemoveComponent<PathTarget>(e);
+            cmdBuffer.RemoveComponent(entityInQueryIndex, e, planedComponentTypes);
 
             // Choose other work
-            if (Random.value < 0.1f)
+            if (rng.Rng.NextFloat() < 0.1f)
             {
-                EntityManager.RemoveComponent(e, typeof(WorkPlantSeeds));
+                cmdBuffer.RemoveComponent<WorkPlantSeeds>(entityInQueryIndex, e);
             }
-        }).Run();
+        }).Schedule();
     }
 }
