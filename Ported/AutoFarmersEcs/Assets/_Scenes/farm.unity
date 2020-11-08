@@ -542,7 +542,8 @@ MonoBehaviour:
   viewDist: 10
   mouseSensitivity: 4000
   freeCamera: 1
-  moveSpeed: 10
+  rotate: 0
+  moveSpeed: 50
   zoomSpeed: 1
 --- !u!1 &1358342729
 GameObject:
