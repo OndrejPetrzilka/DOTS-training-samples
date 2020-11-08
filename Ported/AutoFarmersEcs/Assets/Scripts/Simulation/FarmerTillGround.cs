@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,9 +13,19 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class FarmerTillGround : SystemBase
 {
+    EntityQuery m_removedWork;
+
+    EntityCommandBufferSystem m_cmdSystem;
+    ComponentTypes m_finishedWorkComponents = new ComponentTypes(new ComponentType[] { typeof(WorkTillGround), typeof(TillingZone), typeof(WorkTarget), typeof(PathFinished), typeof(PathData), typeof(PathTarget) });
+
     protected override void OnCreate()
     {
         base.OnCreate();
+
+        m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
+
+        m_removedWork = Query.WithAll<TillingZone>().WithNone<WorkTillGround>();
+
         RequireSingletonForUpdate<Settings>();
         RequireSingletonForUpdate<Ground>();
         RequireSingletonForUpdate<RockLookup>();
@@ -31,21 +42,21 @@ public class FarmerTillGround : SystemBase
         var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
 
         // Remove tilling zone when work is lost
-        Entities.WithStructuralChanges().WithAll<TillingZone>().WithNone<WorkTillGround>().ForEach((Entity e) =>
-        {
-            EntityManager.RemoveComponent<TillingZone>(e);
-        }).Run();
+        EntityManager.RemoveComponent(m_removedWork, typeof(TillingZone));
 
-        // Initial state
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkTillGround>().WithNone<TillingZone>().ForEach((Entity e, in Position position) =>
+        var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+
+        // Initial state, assign tilling zone
+        var componentTypesRemoveWork = new ComponentTypes(typeof(WorkTillGround), typeof(WorkTarget));
+        Entities.WithAll<FarmerTag, WorkTillGround>().WithNone<TillingZone>().ForEach((Entity e, int entityInQueryIndex, ref RandomState rng, in Position position) =>
         {
             // Find area & generate path
             int2 tile = (int2)math.floor(position.Value);
 
-            int width = Random.Range(1, 8);
-            int height = Random.Range(1, 8);
-            int minX = tile.x + Random.Range(-10, 10 - width);
-            int minY = tile.y + Random.Range(-10, 10 - height);
+            int width = rng.Rng.NextInt(1, 8);
+            int height = rng.Rng.NextInt(1, 8);
+            int minX = tile.x + rng.Rng.NextInt(-10, 10 - width);
+            int minY = tile.y + rng.Rng.NextInt(-10, 10 - height);
             if (minX < 0) minX = 0;
             if (minY < 0) minY = 0;
             if (minX + width >= mapSize.x) minX = mapSize.x - 1 - width;
@@ -71,33 +82,32 @@ public class FarmerTillGround : SystemBase
             }
             if (!blocked && hasTarget)
             {
-                EntityManager.AddComponentData(e, new TillingZone() { Position = new int2(minX, minY), Size = new int2(width, height) });
-
-                var buffer = EntityManager.AddBuffer<PathData>(e);
+                cmdBuffer.AddComponent(entityInQueryIndex, e, new TillingZone() { Position = new int2(minX, minY), Size = new int2(width, height) });
+                var buffer = cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e);
                 buffer.Add(new PathData { Position = new int2(minX, minY) });
             }
             else
             {
-                if (Random.value < .2f)
+                if (rng.Rng.NextFloat() < .2f)
                 {
-                    EntityManager.RemoveComponent(e, typeof(WorkTillGround));
-                    EntityManager.RemoveComponent(e, typeof(WorkTarget));
+                    cmdBuffer.RemoveComponent(entityInQueryIndex, e, componentTypesRemoveWork);
                 }
             }
-        }).Run();
-
-        ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
+        }).Schedule();
 
         // Reached target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkTillGround>().WithAll<PathFinished>().ForEach((Entity e, in TillingZone zone, in Position position) =>
+        var cmdBuffer2 = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+        var finishedWorkComponents = m_finishedWorkComponents;
+
+        Entities.WithAll<FarmerTag, WorkTillGround, PathFinished>().ForEach((Entity e, int entityInQueryIndex, ref RandomState rng, in TillingZone zone, in Position position) =>
         {
             var min = zone.Position;
             var max = zone.Position + zone.Size;
 
-            Debug.DrawLine(new Vector3(min.x, .1f, min.y), new Vector3(max.x + 1f, .1f, min.y), Color.green);
-            Debug.DrawLine(new Vector3(max.x + 1f, .1f, min.y), new Vector3(max.x + 1f, .1f, max.y + 1f), Color.green);
-            Debug.DrawLine(new Vector3(max.x + 1f, .1f, max.y + 1f), new Vector3(min.x, .1f, max.y + 1f), Color.green);
-            Debug.DrawLine(new Vector3(min.x, .1f, max.y + 1f), new Vector3(min.x, .1f, min.y), Color.green);
+            //Debug.DrawLine(new Vector3(min.x, .1f, min.y), new Vector3(max.x + 1f, .1f, min.y), Color.green);
+            //Debug.DrawLine(new Vector3(max.x + 1f, .1f, min.y), new Vector3(max.x + 1f, .1f, max.y + 1f), Color.green);
+            //Debug.DrawLine(new Vector3(max.x + 1f, .1f, max.y + 1f), new Vector3(min.x, .1f, max.y + 1f), Color.green);
+            //Debug.DrawLine(new Vector3(min.x, .1f, max.y + 1f), new Vector3(min.x, .1f, min.y), Color.green);
 
             // Till ground
             int2 tile = (int2)math.floor(position.Value);
@@ -105,26 +115,24 @@ public class FarmerTillGround : SystemBase
 
             if (!ground[index].IsTilled)
             {
-                ground[index] = new Ground() { Till = Random.Range(0.8f, 1) };
+                ground[index] = new Ground() { Till = rng.Rng.NextFloat(0.8f, 1) };
             }
 
             if (TryFindNextTile(zone, mapSize, ground, out int2 newTile))
             {
-                var buffer = EntityManager.AddBuffer<PathData>(e);
+                var buffer = cmdBuffer2.AddBuffer<PathData>(entityInQueryIndex, e);
                 buffer.Length = 0;
                 buffer.Add(new PathData { Position = newTile });
-                EntityManager.RemoveComponent<PathFinished>(e);
+
+                cmdBuffer2.RemoveComponent<PathFinished>(entityInQueryIndex, e);
             }
             else
             {
-                EntityManager.RemoveComponent(e, typeof(WorkTillGround));
-                EntityManager.RemoveComponent(e, typeof(TillingZone));
-                EntityManager.RemoveComponent(e, typeof(WorkTarget));
-                EntityManager.RemoveComponent<PathFinished>(e);
-                EntityManager.RemoveComponent<PathData>(e);
-                EntityManager.RemoveComponent<PathTarget>(e);
+                cmdBuffer2.RemoveComponent(entityInQueryIndex, e, finishedWorkComponents);
             }
-        }).Run();
+        }).Schedule();
+
+        Dependency.Complete();
     }
 
     private static bool TryFindNextTile(TillingZone zone, int2 mapSize, DynamicBuffer<Ground> ground, out int2 result)
