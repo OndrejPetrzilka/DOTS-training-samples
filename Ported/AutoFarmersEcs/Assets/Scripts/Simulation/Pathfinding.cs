@@ -49,8 +49,7 @@ public class Pathfinding : SystemBase
         BufferFromEntity<LookupData> lookupDataArray = GetBufferFromEntity<LookupData>(true);
         BufferFromEntity<LookupEntity> lookupEntityArray = GetBufferFromEntity<LookupEntity>(true);
 
-        // PathHelper uses NativeQueue, which is not compatible with Burst
-        Entities.WithoutBurst().WithReadOnly(lookupDataArray).WithReadOnly(groundArray).WithNone<PathData>().ForEach((Entity e, int entityInQueryIndex, in FindPath search, in Position position) =>
+        Entities.WithReadOnly(lookupDataArray).WithReadOnly(groundArray).WithNone<PathData>().ForEach((Entity e, int entityInQueryIndex, in FindPath search, in Position position) =>
         {
             var buffer = cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e);
             PathHelper.FindPath(groundArray[ground], lookupDataArray[lookup], (int2)position.Value, mapSize, nonWalkableComponentIndex, search, buffer);
