@@ -12,19 +12,18 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class FarmerPlantSeeds : SystemBase
 {
-    EntityQuery m_hasWork;
     EntityArchetype m_plantArchetype;
+    EntityQuery m_needsSeeds;
+    EntityQuery m_needsPlantTarget;
 
     protected override void OnCreate()
     {
         base.OnCreate();
         RequireSingletonForUpdate<Settings>();
-        RequireSingletonForUpdate<Ground>();
-        RequireSingletonForUpdate<RockLookup>();
-        RequireSingletonForUpdate<StoreLookup>();
-        RequireSingletonForUpdate<PlantLookup>();
-        m_hasWork = GetEntityQuery(typeof(WorkPlantSeeds));
+        RequireSingletonForUpdate<LookupData>();
         m_plantArchetype = EntityManager.CreateArchetype(typeof(PlantTag), typeof(Position));
+        m_needsSeeds = Query.WithAll<FarmerTag, WorkPlantSeeds>().WithNone<HasSeedsTag, PathTarget>();
+        m_needsPlantTarget = Query.WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithNone<PathTarget>();
     }
 
     protected override void OnUpdate()
@@ -32,94 +31,33 @@ public class FarmerPlantSeeds : SystemBase
         var settings = this.GetSettings();
         var mapSize = settings.mapSize;
 
-        var rocks = this.GetSingleton<RockLookup>();
-        var stores = this.GetSingleton<StoreLookup>();
-        var plants = this.GetSingleton<PlantLookup>();
-
-        // Does not have seeds, does not have target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkPlantSeeds>().WithNone<HasSeedsTag, WorkTarget>().ForEach((Entity e, in Position position) =>
-        {
-            // Find closest store
-            float distSq = float.MaxValue;
-            Entity store = Entity.Null;
-            for (int i = 0; i < stores.Length; i++)
-            {
-                int2 pos = new int2(i % mapSize.x, i / mapSize.x);
-                float newDistSq = math.lengthsq(position.Value - pos);
-                if (newDistSq < distSq)
-                {
-                    var newStore = stores[i].Entity;
-                    if (EntityManager.Exists(newStore))
-                    {
-                        store = newStore;
-                        distSq = newDistSq;
-                    }
-                }
-            }
-
-            if (store == Entity.Null)
-            {
-                EntityManager.RemoveComponent(e, typeof(WorkPlantSeeds));
-            }
-            else
-            {
-                EntityManager.AddComponentData(e, new WorkTarget { Value = store });
-                var buffer = EntityManager.AddBuffer<PathData>(e);
-                buffer.Add(new PathData { Position = EntityManager.GetComponentData<Position>(store).Value });
-            }
-        }).Run();
+        // Go to store to buy seeds
+        this.AddComponentData(m_needsSeeds, FindPath.Create<StoreTag>());
 
         // Does not have seeds, reached target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkPlantSeeds, WorkTarget>().WithNone<HasSeedsTag, PathData>().ForEach((Entity e, in Position position) =>
+        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkPlantSeeds, PathFinished>().WithNone<HasSeedsTag>().ForEach((Entity e) =>
         {
             // Buy seeds, remove target
             EntityManager.AddComponent<HasSeedsTag>(e);
-            EntityManager.RemoveComponent<WorkTarget>(e);
+            EntityManager.RemoveComponent<PathFinished>(e);
+            EntityManager.RemoveComponent<PathData>(e);
+            EntityManager.RemoveComponent<PathTarget>(e);
 
         }).Run();
 
-        var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
+        // Find plant target
+        this.AddComponentData(m_needsPlantTarget, new FindPath(-1, 0, FindPathFlags.UseGroundState | FindPathFlags.GroundStateTilled));
 
-        // Has seeds, does not have target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithNone<WorkTarget>().ForEach((Entity e, in Position position) =>
-        {
-            // Find closest tilled ground
-            float distSq = float.MaxValue;
-            int2 target = new int2(-1, -1);
-            for (int i = 0; i < ground.Length; i++)
-            {
-                int2 pos = new int2(i % mapSize.x, i / mapSize.x);
-                float newDistSq = math.lengthsq(position.Value - pos);
-                if (newDistSq < distSq)
-                {
-                    if (ground[i].IsTilled && plants[i].Entity == Entity.Null)
-                    {
-                        target = pos;
-                        distSq = newDistSq;
-                    }
-                }
-            }
-
-            if (math.all(target >= 0))
-            {
-                EntityManager.AddComponentData(e, new WorkTarget { Value = Entity.Null });
-                var buffer = EntityManager.AddBuffer<PathData>(e);
-                buffer.Add(new PathData { Position = target });
-            }
-            else
-            {
-                EntityManager.RemoveComponent<WorkPlantSeeds>(e);
-            }
-        }).Run();
+        var lookup = this.GetSingleton<LookupData>();
 
         // Reached target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithNone<PathData>().ForEach((Entity e, in WorkTarget target, in Position position) =>
+        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithAll<PathFinished>().ForEach((Entity e, in Position position) =>
         {
             // Plant seeds
             int2 tile = (int2)math.floor(position.Value);
 
             // Check there's no plant
-            if (plants[tile.x + tile.y * mapSize.x].Entity == Entity.Null)
+            if (lookup[tile.x + tile.y * mapSize.x].ComponentTypeIndex == -1)
             {
                 // Spawn plant
                 int seed = Mathf.FloorToInt(Mathf.PerlinNoise(tile.x / 10f, tile.y / 10f) * 10) + 317281687;
@@ -130,7 +68,9 @@ public class FarmerPlantSeeds : SystemBase
             }
 
             // Remove target
-            EntityManager.RemoveComponent(e, typeof(WorkTarget));
+            EntityManager.RemoveComponent<PathFinished>(e);
+            EntityManager.RemoveComponent<PathData>(e);
+            EntityManager.RemoveComponent<PathTarget>(e);
 
             // Choose other work
             if (Random.value < 0.1f)

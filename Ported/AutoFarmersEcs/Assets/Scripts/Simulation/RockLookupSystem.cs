@@ -57,7 +57,7 @@ public class RockLookupSystem : SystemBase
         }).Run();
 
         // Remove from lookup
-        Entities.WithNone<RockTag>().ForEach((Entity e, in RockLookupData data) =>
+        Entities.WithNone<RockTag>().ForEach((in RockLookupData data) =>
         {
             SetLookupData(lookup, Entity.Null, data.Position, data.Size, mapSize.x);
         }).Run();

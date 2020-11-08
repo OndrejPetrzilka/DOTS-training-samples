@@ -50,18 +50,10 @@ public class LookupRegistrationSystem : SystemBase
         Element element;
         element.ComponentType = componentType;
         element.ComponentTypeIndex = TypeManager.GetTypeIndex(componentType);
-        element.AddedQuery = GetEntityQuery(new EntityQueryDesc
-        {
-            All = new ComponentType[] { componentType },
-            None = new ComponentType[] { typeof(LookupComponent) },
-        });
+        element.AddedQuery = Query.WithAll(componentType).WithNone<LookupComponent>();
         m_elements.Add(element);
 
-        m_deletedQuery = GetEntityQuery(new EntityQueryDesc
-        {
-            All = new ComponentType[] { typeof(LookupComponent) },
-            None = m_elements.Select(s => s.ComponentType).ToArray(),
-        });
+        m_deletedQuery = Query.WithAll<LookupComponent>().WithNone(m_elements.Select(s => s.ComponentType).ToArray());
     }
 
     protected override void OnCreate()

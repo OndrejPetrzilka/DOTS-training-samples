@@ -12,8 +12,6 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class FarmerTillGround : SystemBase
 {
-    EntityQuery m_hasWork;
-
     protected override void OnCreate()
     {
         base.OnCreate();
@@ -21,7 +19,6 @@ public class FarmerTillGround : SystemBase
         RequireSingletonForUpdate<Ground>();
         RequireSingletonForUpdate<RockLookup>();
         RequireSingletonForUpdate<StoreLookup>();
-        m_hasWork = GetEntityQuery(typeof(WorkTillGround));
     }
 
     protected override void OnUpdate()
@@ -29,9 +26,9 @@ public class FarmerTillGround : SystemBase
         var settings = this.GetSettings();
         var mapSize = settings.mapSize;
 
-        var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
         var rocks = this.GetSingleton<RockLookup>();
         var stores = this.GetSingleton<StoreLookup>();
+        var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
 
         // Initial state
         Entities.WithStructuralChanges().WithAll<FarmerTag, WorkTillGround>().WithNone<TillingZone>().ForEach((Entity e, in Position position) =>
@@ -49,24 +46,24 @@ public class FarmerTillGround : SystemBase
             if (minY + height >= mapSize.y) minY = mapSize.y - 1 - height;
 
             bool blocked = false;
+            bool hasTarget = false;
             for (int x = minX; x <= minX + width; x++)
             {
                 for (int y = minY; y <= minY + height; y++)
                 {
                     int index = x + y * mapSize.x;
-
+                    if (!hasTarget && !ground[index].IsTilled)
+                    {
+                        hasTarget = true;
+                    }
                     if (rocks[index].Entity != Entity.Null || stores[index].Entity != Entity.Null)
                     {
                         blocked = true;
                         break;
                     }
                 }
-                if (blocked)
-                {
-                    break;
-                }
             }
-            if (blocked == false)
+            if (!blocked && hasTarget)
             {
                 EntityManager.AddComponentData(e, new TillingZone() { Position = new int2(minX, minY), Size = new int2(width, height) });
 
@@ -83,8 +80,9 @@ public class FarmerTillGround : SystemBase
             }
         }).Run();
 
+
         // Reached target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkTillGround>().WithNone<PathData>().ForEach((Entity e, in TillingZone zone, in Position position) =>
+        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkTillGround>().WithAll<PathFinished>().ForEach((Entity e, in TillingZone zone, in Position position) =>
         {
             var min = zone.Position;
             var max = zone.Position + zone.Size;
@@ -100,19 +98,24 @@ public class FarmerTillGround : SystemBase
 
             if (!ground[index].IsTilled)
             {
-                ground.ElementAt(index) = new Ground() { Till = Random.Range(0.8f, 1) };
+                ground[index] = new Ground() { Till = Random.Range(0.8f, 1) };
             }
 
             if (TryFindNextTile(zone, mapSize, ground, out int2 newTile))
             {
                 var buffer = EntityManager.AddBuffer<PathData>(e);
+                buffer.Length = 0;
                 buffer.Add(new PathData { Position = newTile });
+                EntityManager.RemoveComponent<PathFinished>(e);
             }
             else
             {
                 EntityManager.RemoveComponent(e, typeof(WorkTillGround));
                 EntityManager.RemoveComponent(e, typeof(TillingZone));
                 EntityManager.RemoveComponent(e, typeof(WorkTarget));
+                EntityManager.RemoveComponent<PathFinished>(e);
+                EntityManager.RemoveComponent<PathData>(e);
+                EntityManager.RemoveComponent<PathTarget>(e);
             }
         }).Run();
     }

@@ -30,6 +30,17 @@ public class FarmerDecision : SystemBase
         }).Schedule();
 
         cmdBuffer = m_cmdSystem.CreateCommandBuffer();
+        Entities.WithAll<FarmerTag, PathFailed>().ForEach((Entity e) =>
+        {
+            cmdBuffer.RemoveComponent<PathFailed>(e);
+            cmdBuffer.RemoveComponent<PathData>(e);
+            cmdBuffer.RemoveComponent<WorkClearRocks>(e);
+            cmdBuffer.RemoveComponent<WorkPlantSeeds>(e);
+            cmdBuffer.RemoveComponent<WorkSellPlants>(e);
+            cmdBuffer.RemoveComponent<WorkTillGround>(e);
+        }).Schedule();
+
+        cmdBuffer = m_cmdSystem.CreateCommandBuffer();
 
         Entities.WithAll<FarmerTag>().WithNone<WorkClearRocks, WorkPlantSeeds, WorkSellPlants>().WithNone<WorkTillGround>().ForEach((Entity e, ref RandomState rng) =>
         {
@@ -38,10 +49,10 @@ public class FarmerDecision : SystemBase
             {
                 cmdBuffer.AddComponent<WorkClearRocks>(e);
             }
-            //else if (rand == 1)
-            //{
-            //    cmdBuffer.AddComponent<WorkTillGround>(e);
-            //}
+            else if (rand == 1)
+            {
+                cmdBuffer.AddComponent<WorkTillGround>(e);
+            }
             //else if (rand == 2)
             //{
             //    cmdBuffer.AddComponent<WorkPlantSeeds>(e);

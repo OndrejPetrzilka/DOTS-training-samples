@@ -59,6 +59,10 @@ public class Pathfinding : SystemBase
                 var target = lookupEntityArray[lookup][targetPos.x + targetPos.y * mapSize.x].Entity;
                 cmdBuffer.AddComponent(entityInQueryIndex, e, new PathTarget { Entity = target });
             }
+            else
+            {
+                cmdBuffer.AddComponent<PathFailed>(entityInQueryIndex, e);
+            }
             cmdBuffer.RemoveComponent<FindPath>(entityInQueryIndex, e);
         }).Schedule();
 
