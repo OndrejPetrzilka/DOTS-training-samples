@@ -32,7 +32,7 @@ public class RockLookupSystem : SystemBase
     protected override void OnUpdate()
     {
         var mapSize = this.GetSettings().mapSize;
-        var lookup = EntityManager.AddBuffer<RockLookup>(GetSingletonEntity<RockLookup>());
+        var lookup = this.GetSingleton<RockLookup>();// EntityManager.AddBuffer<RockLookup>(GetSingletonEntity<RockLookup>());
         if (lookup.Length == 0)
         {
             lookup.Length = mapSize.x * mapSize.y;

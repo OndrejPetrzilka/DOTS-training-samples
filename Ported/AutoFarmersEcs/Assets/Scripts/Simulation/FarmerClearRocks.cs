@@ -37,17 +37,24 @@ public class FarmerClearRocks : SystemBase
         if (m_rocks.CalculateChunkCountWithoutFiltering() == 0)
         {
             // All rocks cleared, remove work
-            EntityManager.RemoveComponent<WorkClearRocks>(m_needsPath);
+            m_cmdSystem.CreateCommandBuffer().RemoveComponent<WorkClearRocks>(m_needsPath);
+            m_cmdSystem.AddJobHandleForProducer(Dependency);
             return;
         }
 
-        // Add FindPath component
-        this.AddComponentData(m_needsPath, FindPath.Create<RockTag>());
+        var singleCmdBuffer = m_cmdSystem.CreateCommandBuffer();
 
         // Remove work when there's no target
-        EntityManager.RemoveComponent<WorkClearRocks>(m_noTarget);
+        singleCmdBuffer.RemoveComponent<WorkClearRocks>(m_noTarget);
 
         var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+
+        // Add FindPath component
+        var findPath = FindPath.Create<RockTag>();
+        Entities.WithAll<FarmerTag, WorkClearRocks>().WithNone<FindPath, PathData>().ForEach((Entity e, int entityInQueryIndex) =>
+        {
+            cmdBuffer.AddComponent(entityInQueryIndex, e, findPath);
+        }).Schedule();
 
         var positions = GetComponentDataFromEntity<Position>(true);
         var healths = GetComponentDataFromEntity<Health>(false);
