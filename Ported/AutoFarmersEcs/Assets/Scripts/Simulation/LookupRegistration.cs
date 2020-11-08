@@ -70,7 +70,7 @@ public class LookupRegistrationSystem : SystemBase
     {
         if (!m_deletedQuery.Equals(default))
         {
-            EntityManager.RemoveComponent(m_deletedQuery, new ComponentTypes(typeof(LookupComponent)));
+            m_cmdSystem.CreateCommandBuffer().RemoveComponent<LookupComponent>(m_deletedQuery);
         }
 
         // TODO: Optimize
