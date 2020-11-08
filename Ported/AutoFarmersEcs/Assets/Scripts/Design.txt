@@ -1,0 +1,31 @@
+﻿
+Farmer manager
+==============
+Spawn farmers in Start()
+- random position on map until it finds empty spot (not blocked by rocks)
+Update farmers in Update()
+- Farmer.Tick()
+- render farmers
+- moveSmooth = 1f - Mathf.Pow(movementSmooth, Time.deltaTime)
+
+
+Farmer
+======
+PickIntension
+- reset path, choose randomly: SmashRocks, TillGround, PlantSeeds, SellPlants
+SmashRocks
+- find rock within range of 20 steps (A* lookup by reachability)
+- attack rock, until it's dead
+TillGround
+PlantSeeds
+SellPlants
+FollowPath
+- move along path, pop reached positions
+- walk around plants (walk on tile border, not center)
+Movement
+- smoothPosition = Vector3.Lerp(smoothPosition, position, moveSmooth);
+Attacking rock
+- random shake
+    float rand = Random.value * .5f;
+    xOffset = (path.xPositions[0] + .5f - smoothPosition.x) * rand;
+    zOffset = (path.yPositions[0] + .5f - smoothPosition.y) * rand;
