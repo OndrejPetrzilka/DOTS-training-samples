@@ -20,7 +20,7 @@ public class HelpText : MonoBehaviour
         {
             timeScale = Time.timeScale;
             version = StatsSystem.Version;
-            Text.text = $"Time scale: {timeScale}\r\nFarmers: {StatsSystem.FarmerCount}\r\nRocks: {StatsSystem.RockCount}\r\nPlants: {StatsSystem.PlantCount}";
+            Text.text = $"Time scale: {timeScale}\r\nFarmers: {StatsSystem.FarmerCount}\r\nRocks: {StatsSystem.RockCount}\r\nPlants: {StatsSystem.PlantCount}\r\nMoney: {StatsSystem.Money}";
         }
     }
 }

@@ -20,6 +20,11 @@ public class FarmerSellPlants : SystemBase
 
     int m_money;
 
+    public int Money
+    {
+        get { return m_money; }
+    }
+
     protected override void OnCreate()
     {
         base.OnCreate();
