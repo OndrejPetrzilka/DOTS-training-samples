@@ -53,10 +53,10 @@ public class FarmerDecision : SystemBase
             {
                 cmdBuffer.AddComponent<WorkTillGround>(e);
             }
-            //else if (rand == 2)
-            //{
-            //    cmdBuffer.AddComponent<WorkPlantSeeds>(e);
-            //}
+            else if (rand == 2)
+            {
+                cmdBuffer.AddComponent<WorkPlantSeeds>(e);
+            }
             //else if (rand == 3)
             //{
             //    cmdBuffer.AddComponent<WorkSellPlants>(e);

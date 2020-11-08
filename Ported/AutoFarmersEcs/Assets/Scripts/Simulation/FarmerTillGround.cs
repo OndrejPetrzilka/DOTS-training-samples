@@ -30,6 +30,12 @@ public class FarmerTillGround : SystemBase
         var stores = this.GetSingleton<StoreLookup>();
         var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
 
+        // Remove tilling zone when work is lost
+        Entities.WithStructuralChanges().WithAll<TillingZone>().WithNone<WorkTillGround>().ForEach((Entity e) =>
+        {
+            EntityManager.RemoveComponent<TillingZone>(e);
+        }).Run();
+
         // Initial state
         Entities.WithStructuralChanges().WithAll<FarmerTag, WorkTillGround>().WithNone<TillingZone>().ForEach((Entity e, in Position position) =>
         {
@@ -80,6 +86,7 @@ public class FarmerTillGround : SystemBase
             }
         }).Run();
 
+        ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
 
         // Reached target
         Entities.WithStructuralChanges().WithAll<FarmerTag, WorkTillGround>().WithAll<PathFinished>().ForEach((Entity e, in TillingZone zone, in Position position) =>

@@ -20,7 +20,7 @@ public class FarmerMovement : SystemBase
     {
         var moveSmooth = 1f - Mathf.Pow(this.GetSettings().movementSmooth, Time.fixedDeltaTime);
 
-        Entities.ForEach((Entity e, ref SmoothPosition smoothPosition, in Position position) =>
+        Entities.ForEach((ref SmoothPosition smoothPosition, in Position position) =>
         {
             smoothPosition.Value = math.lerp(smoothPosition.Value, position.Value, moveSmooth);
         }).ScheduleParallel();
