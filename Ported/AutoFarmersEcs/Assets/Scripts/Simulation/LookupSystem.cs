@@ -39,8 +39,8 @@ public class LookupSystem : SystemBase
         var mapSize = this.GetSettings().mapSize;
         Entity singleton = GetSingletonEntity<LookupEntity>();
 
-        InitializeBuffer(EntityManager.AddBuffer<LookupEntity>(singleton), mapSize);
-        InitializeBuffer(EntityManager.AddBuffer<LookupData>(singleton), mapSize);
+        InitializeBuffer(EntityManager.GetBuffer<LookupEntity>(singleton), mapSize);
+        InitializeBuffer(EntityManager.GetBuffer<LookupData>(singleton), mapSize);
 
         // TODO: Change monitoring for: Position, Size, LookupComponent
 
@@ -51,10 +51,12 @@ public class LookupSystem : SystemBase
         Entities.WithNone<LookupComponent>().ForEach((Entity e, in LookupInternalData data) =>
         {
             SetLookupData(entityLookup[singleton], entityLookupData[singleton], Entity.Null, default, data.Position, data.Size, mapSize.x);
-        }).Run();
+        }).Schedule();
+
+        var cmdBuffer = m_cmdSystem.CreateCommandBuffer();
 
         // Remove components
-        EntityManager.RemoveComponent(m_deletedQuery, typeof(LookupInternalData));
+        cmdBuffer.RemoveComponent(m_deletedQuery, typeof(LookupInternalData));
 
         entityLookupData = GetBufferFromEntity<LookupData>(false);
         ComponentDataFromEntity<Size> sizes = GetComponentDataFromEntity<Size>(true);
@@ -74,7 +76,6 @@ public class LookupSystem : SystemBase
         sizes = GetComponentDataFromEntity<Size>(true);
 
         // Add new
-        var cmdBuffer = m_cmdSystem.CreateCommandBuffer();
         Entities.WithReadOnly(filters).WithReadOnly(sizes).WithNone<LookupInternalData>().ForEach((Entity e, in LookupComponent lookup, in Position position) =>
         {
             int2 size = sizes.HasComponent(e) ? (int2)sizes[e].Value : int2.zero;

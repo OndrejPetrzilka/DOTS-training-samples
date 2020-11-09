@@ -89,9 +89,9 @@ public class LookupRegistrationSystem : SystemBase
             addJob.ComponentIndex = element.ComponentTypeIndex;
             var handle = addJob.ScheduleParallel(element.AddedQuery, Dependency);
             dependencies[index] = handle;
-            m_cmdSystem.AddJobHandleForProducer(handle);
             index++;
         }
         Dependency = JobHandle.CombineDependencies(dependencies);
+        m_cmdSystem.AddJobHandleForProducer(Dependency);
     }
 }

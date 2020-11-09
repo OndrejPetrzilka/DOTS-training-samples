@@ -32,7 +32,7 @@ public class RockLookupSystem : SystemBase
     protected override void OnUpdate()
     {
         var mapSize = this.GetSettings().mapSize;
-        var lookup = this.GetSingleton<RockLookup>();// EntityManager.AddBuffer<RockLookup>(GetSingletonEntity<RockLookup>());
+        var lookup = this.GetSingleton<RockLookup>();
         if (lookup.Length == 0)
         {
             lookup.Length = mapSize.x * mapSize.y;
@@ -47,23 +47,23 @@ public class RockLookupSystem : SystemBase
         // Rocks are immovable, change filter to update position not needed
 
         // Add new rocks
-        Entities.WithStructuralChanges().WithAll<RockTag>().WithNone<RockLookupData>().ForEach((Entity e, in Position position, in Size size) =>
+        Entities.WithAll<RockTag>().WithNone<RockLookupData>().ForEach((Entity e, in Position position, in Size size) =>
         {
             RockLookupData data;
             data.Position = (int2)position.Value;
             data.Size = (int2)size.Value;
             SetLookupData(lookup, e, data.Position, data.Size, mapSize.x);
             buffer.AddComponent(e, data);
-        }).Run();
+        }).Schedule();
 
         // Remove from lookup
         Entities.WithNone<RockTag>().ForEach((in RockLookupData data) =>
         {
             SetLookupData(lookup, Entity.Null, data.Position, data.Size, mapSize.x);
-        }).Run();
+        }).Schedule();
 
         // Remove components
-        EntityManager.RemoveComponent(m_deletedRocks, typeof(RockLookupData));
+        buffer.RemoveComponent(m_deletedRocks, typeof(RockLookupData));
 
         m_cmdBuffer.AddJobHandleForProducer(Dependency);
     }
