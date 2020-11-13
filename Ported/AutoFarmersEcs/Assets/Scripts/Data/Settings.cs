@@ -7,6 +7,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
+[GenerateAuthoringComponent]
 public class Settings : IComponentData, IEquatable<Settings>
 {
     public int2 mapSize;

@@ -35,4 +35,14 @@ public static class EntityExtensions
     {
         return new QueryBuilder(system);
     }
+
+    public static void Initialize<T>(this DynamicBuffer<T> buffer, int length, T defaultValue = default)
+        where T : struct
+    {
+        buffer.Length = length;
+        for (int i = 0; i < length; i++)
+        {
+            buffer[i] = defaultValue;
+        }
+    }
 }

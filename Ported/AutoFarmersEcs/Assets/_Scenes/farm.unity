@@ -134,7 +134,6 @@ GameObject:
   m_Component:
   - component: {fileID: 113544370}
   - component: {fileID: 113544369}
-  - component: {fileID: 113544371}
   m_Layer: 0
   m_Name: Settings
   m_TagString: Untagged
@@ -151,7 +150,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 113544368}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1b1511e75707f004db53e6bd6fe78974, type: 3}
+  m_Script: {fileID: 11500000, guid: 266733429bda22a40b3b29c8d8b1e9df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   mapSize:
@@ -258,7 +257,7 @@ MonoBehaviour:
     m_RotationOrder: 0
   farmerMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   farmerMaterial: {fileID: 2100000, guid: d5df058b269f73f419ae386aa3adbc0f, type: 2}
-  initialFarmerCount: 1
+  initialFarmerCount: 0
   maxFarmerCount: 300
   movementSmooth: 0.003
   droneMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
@@ -274,25 +273,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 113544368}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 100, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &113544371
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 113544368}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ea7d7495833204790ba1d3a8755397f8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ConversionMode: 0
 --- !u!1 &313438282
 GameObject:
   m_ObjectHideFlags: 0
@@ -545,6 +531,58 @@ MonoBehaviour:
   rotate: 0
   moveSpeed: 50
   zoomSpeed: 1
+--- !u!1 &836533899
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 836533901}
+  - component: {fileID: 836533900}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &836533900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 836533899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45a335734b1572644a6a5d09d87adc65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _SceneAsset: {fileID: 102900000, guid: a2fd45d750f518e48a6fb35e401f15fe, type: 3}
+  _HierarchyColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  AutoLoadScene: 1
+  _SceneGUID:
+    Value:
+      x: 2102714154
+      y: 1317101317
+      z: 3845912232
+      w: 4015124740
+--- !u!4 &836533901
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 836533899}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 7
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1358342729
 GameObject:
   m_ObjectHideFlags: 0
