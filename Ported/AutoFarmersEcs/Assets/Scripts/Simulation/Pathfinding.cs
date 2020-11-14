@@ -48,7 +48,7 @@ public class Pathfinding : SystemBase
         BufferFromEntity<LookupData> lookupDataArray = GetBufferFromEntity<LookupData>(true);
         BufferFromEntity<LookupEntity> lookupEntityArray = GetBufferFromEntity<LookupEntity>(true);
 
-        Entities.WithReadOnly(lookupDataArray).WithReadOnly(groundArray).WithNone<PathData>().ForEach((Entity e, int entityInQueryIndex, in FindPath search, in Position position) =>
+        Entities.WithReadOnly(lookupEntityArray).WithReadOnly(lookupDataArray).WithReadOnly(groundArray).WithNone<PathData>().ForEach((Entity e, int entityInQueryIndex, in FindPath search, in Position position) =>
         {
             var buffer = cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e);
             PathHelper.FindPath(groundArray[ground], lookupDataArray[lookup], (int2)position.Value, mapSize, nonWalkableComponentIndex, search, buffer);
@@ -63,7 +63,7 @@ public class Pathfinding : SystemBase
                 cmdBuffer.AddComponent<PathFailed>(entityInQueryIndex, e);
             }
             cmdBuffer.RemoveComponent<FindPath>(entityInQueryIndex, e);
-        }).Schedule();
+        }).ScheduleParallel();
 
         m_cmdSystem.AddJobHandleForProducer(Dependency);
     }
