@@ -26,7 +26,6 @@ public class FarmerPlantSeeds : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        RequireSingletonForUpdate<RenderSettings>();
         RequireSingletonForUpdate<LookupData>();
         m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
         m_plantArchetype = EntityManager.CreateArchetype(typeof(PlantTag), typeof(Position));

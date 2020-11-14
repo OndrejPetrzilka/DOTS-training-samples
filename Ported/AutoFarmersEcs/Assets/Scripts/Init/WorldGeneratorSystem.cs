@@ -8,11 +8,10 @@ using Unity.Mathematics;
 using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
-[UpdateInGroup(typeof(InitializationSystemGroup))]
+[UpdateInGroup(typeof(InitializationSystemGroup), OrderLast = true)]
+[UpdateBefore(typeof(EndInitializationEntityCommandBufferSystem))]
 public class WorldGeneratorSystem : SystemBase
 {
-    const int RockSpawnAttemps = 2000;
-
     EntityQuery m_query;
 
     protected override void OnCreate()
@@ -69,7 +68,7 @@ public class WorldGeneratorSystem : SystemBase
         var rockArchetype = manager.CreateArchetype(typeof(RockTag), typeof(Position), typeof(Depth), typeof(Size), typeof(Health));
         bool[,] rocks = new bool[settings.MapSize.x, settings.MapSize.y];
 
-        for (int i = 0; i < RockSpawnAttemps; i++)
+        for (int i = 0; i < settings.MaxRockCount; i++)
         {
             int width = rng.NextInt(0, 4);
             int height = rng.NextInt(0, 4);

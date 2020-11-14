@@ -28,7 +28,6 @@ public class FarmerSellPlants : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        RequireSingletonForUpdate<RenderSettings>();
         RequireSingletonForUpdate<Ground>();
         m_hasWork = GetEntityQuery(typeof(WorkSellPlants));
         m_farmers = GetEntityQuery(typeof(FarmerTag));

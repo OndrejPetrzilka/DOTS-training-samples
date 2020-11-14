@@ -24,7 +24,6 @@ public class FarmerClearRocks : SystemBase
 
         m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
 
-        RequireSingletonForUpdate<RenderSettings>();
         m_rocks = Query.WithAll<RockTag>();
         m_needsPath = Query.WithAll<FarmerTag, WorkClearRocks>().WithNone<FindPath, PathData>();
         m_noTarget = Query.WithAll<FarmerTag, WorkClearRocks, PathData>().WithNone<PathTarget>();
@@ -34,7 +33,7 @@ public class FarmerClearRocks : SystemBase
     {
         var mapSize = this.GetSettings().MapSize;
 
-        if (m_rocks.CalculateChunkCountWithoutFiltering() == 0)
+        if (m_rocks.IsEmptyIgnoreFilter)
         {
             // All rocks cleared, remove work
             m_cmdSystem.CreateCommandBuffer().RemoveComponent<WorkClearRocks>(m_needsPath);

@@ -7,21 +7,124 @@ using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.UniversalDelegates;
+using Unity.Jobs;
 using Unity.Mathematics;
 
+/// <summary>
+/// Adds entities with specific component into lookup buffer, where they can be found by position index.
+/// </summary>
 [UpdateInGroup(typeof(LookupGroup))]
+[AlwaysUpdateSystem]
 public class LookupSystem : SystemBase
 {
-    struct LookupInternalData : ISystemStateComponentData
+    protected struct Element
+    {
+        public EntityQuery AddedQuery;
+        public ComponentType ComponentType;
+        public int ComponentTypeIndex;
+    }
+
+    protected struct LookupInternalData : ISystemStateComponentData
     {
         public int2 Position;
         public int2 Size;
+        public int ComponentTypeIndex;
     }
 
+    struct RemoveJob : IJobChunk
+    {
+        [ReadOnly]
+        public Entity Singleton;
+
+        public int MapWidth;
+
+        [ReadOnly]
+        public ComponentTypeHandle<LookupInternalData> DataHandle;
+
+        public BufferFromEntity<LookupEntity> EntityLookup;
+        public BufferFromEntity<LookupData> EntityLookupData;
+
+        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
+        {
+            var lookupBuffer = EntityLookup[Singleton];
+            var lookupDataBuffer = EntityLookupData[Singleton];
+            var datas = chunk.GetNativeArray(DataHandle);
+
+            for (int i = 0; i < chunk.Count; i++)
+            {
+                var data = datas[i];
+                SetLookupData(lookupBuffer, lookupDataBuffer, Entity.Null, default, data.Position, data.Size, MapWidth);
+            }
+        }
+    }
+
+    struct AddJob : IJobChunk
+    {
+        [ReadOnly]
+        public EntityTypeHandle Entities;
+
+        [ReadOnly]
+        public Entity Singleton;
+
+        public int ComponentTypeIndex;
+        public int MapWidth;
+
+        [ReadOnly]
+        public ComponentTypeHandle<Position> Positions;
+
+        [ReadOnly]
+        public ComponentTypeHandle<Size> Sizes;
+
+        [ReadOnly]
+        public ComponentTypeHandle<LookupComponentFilters> Filters;
+
+        public EntityCommandBuffer Buffer;
+
+        public BufferFromEntity<LookupEntity> EntityLookup;
+        public BufferFromEntity<LookupData> EntityLookupData;
+
+        public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
+        {
+            var entities = chunk.GetNativeArray(Entities);
+            var positions = chunk.GetNativeArray(Positions);
+            var sizes = chunk.Has(Sizes) ? chunk.GetNativeArray(Sizes) : default;
+            var filters = chunk.Has(Filters) ? chunk.GetNativeArray(Filters) : default;
+
+            var lookupBuffer = EntityLookup[Singleton];
+            var lookupDataBuffer = EntityLookupData[Singleton];
+
+            for (int i = 0; i < chunk.Count; i++)
+            {
+                var e = entities[i];
+                var position = positions[i];
+
+                int2 size = sizes.IsCreated ? (int2)sizes[i].Value : int2.zero;
+                byte filter = filters.IsCreated ? filters[i].Value : default;
+
+                LookupData element = new LookupData(ComponentTypeIndex, filter);
+                LookupInternalData data = new LookupInternalData { Position = (int2)position.Value, Size = size, ComponentTypeIndex = ComponentTypeIndex };
+                SetLookupData(lookupBuffer, lookupDataBuffer, e, element, data.Position, data.Size, MapWidth);
+                Buffer.AddComponent(e, data);
+            }
+        }
+    }
+
+    EntityQuery m_changedEntitiesQuery;
     EntityQuery m_deletedQuery;
+    List<Element> m_elements = new List<Element>();
     EntityCommandBufferSystem m_cmdSystem;
     WorldSettings m_settings;
     Entity m_lookup;
+
+    public EntityQuery DeletedQuery
+    {
+        get { return m_deletedQuery; }
+    }
+
+    public WorldSettings Settings
+    {
+        get { return m_settings; }
+    }
 
     protected override void OnCreate()
     {
@@ -32,6 +135,27 @@ public class LookupSystem : SystemBase
         EntityManager.SetName(m_lookup, "Lookup");
         EntityManager.AddBuffer<LookupEntity>(m_lookup);
         EntityManager.AddBuffer<LookupData>(m_lookup);
+
+        Register(typeof(RockTag));
+        Register(typeof(StoreTag));
+        Register(typeof(PlantTag));
+    }
+
+    public void Register(Type componentType)
+    {
+        Element element;
+        element.ComponentType = componentType;
+        element.ComponentTypeIndex = TypeManager.GetTypeIndex(componentType);
+        element.AddedQuery = Query.WithAll(componentType).WithNone<LookupInternalData>();
+        m_elements.Add(element);
+
+        var desc = new EntityQueryDesc
+        {
+            All = new ComponentType[] { typeof(LookupInternalData) },
+            None = m_elements.Select(s => s.ComponentType).ToArray(),
+        };
+
+        m_deletedQuery = EntityManager.CreateEntityQuery(desc);
     }
 
     protected override void OnDestroy()
@@ -55,57 +179,104 @@ public class LookupSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        var mapSize = m_settings.MapSize;
-        Entity singleton = m_lookup;
-
-        // TODO: Change monitoring for: Position, Size, LookupComponent
-        var entityLookup = GetBufferFromEntity<LookupEntity>(false);
-        var entityLookupData = GetBufferFromEntity<LookupData>(false);
-
-        // Remove deleted
-        Entities.WithNone<LookupComponent>().WithStoreEntityQueryInField(ref m_deletedQuery).ForEach((Entity e, in LookupInternalData data) =>
-        {
-            SetLookupData(entityLookup[singleton], entityLookupData[singleton], Entity.Null, default, data.Position, data.Size, mapSize.x);
-        }).Schedule();
-
-        var cmdBuffer = m_cmdSystem.CreateCommandBuffer();
-
-        // Remove components
-        cmdBuffer.RemoveComponent(m_deletedQuery, typeof(LookupInternalData));
-
-        entityLookupData = GetBufferFromEntity<LookupData>(false);
-        ComponentDataFromEntity<Size> sizes = GetComponentDataFromEntity<Size>(true);
-
-        // Handle changed LookupComponentFilters
-        Entities.WithReadOnly(sizes).WithChangeFilter<LookupComponentFilters>().ForEach((Entity e, in LookupComponent lookup, in Position position, in LookupComponentFilters filter) =>
-        {
-            int2 size = sizes.HasComponent(e) ? (int2)sizes[e].Value : int2.zero;
-
-            LookupData element = new LookupData(lookup.ComponentTypeIndex, filter.Value);
-            SetLookupFilter(entityLookupData[singleton], element, (int2)position.Value, size, mapSize.x);
-        }).Schedule();
-
-        entityLookup = GetBufferFromEntity<LookupEntity>(false);
-        ComponentDataFromEntity<LookupComponentFilters> filters = GetComponentDataFromEntity<LookupComponentFilters>(true);
-        entityLookupData = GetBufferFromEntity<LookupData>(false);
-        sizes = GetComponentDataFromEntity<Size>(true);
-
-        // Add new
-        Entities.WithReadOnly(filters).WithReadOnly(sizes).WithNone<LookupInternalData>().ForEach((Entity e, in LookupComponent lookup, in Position position) =>
-        {
-            int2 size = sizes.HasComponent(e) ? (int2)sizes[e].Value : int2.zero;
-            byte filter = filters.HasComponent(e) ? filters[e].Value : default;
-
-            LookupData element = new LookupData(lookup.ComponentTypeIndex, filter);
-            LookupInternalData data = new LookupInternalData { Position = (int2)position.Value, Size = size };
-            SetLookupData(entityLookup[singleton], entityLookupData[singleton], e, element, data.Position, data.Size, mapSize.x);
-            cmdBuffer.AddComponent(e, data);
-        }).Schedule();
-
-        m_cmdSystem.AddJobHandleForProducer(Dependency);
+        RemoveDeletedEntities();
+        UpdateEntitiesWithChangedFilters();
+        AddNewEntities();
     }
 
-    static void SetLookupData(DynamicBuffer<LookupEntity> entityArray, DynamicBuffer<LookupData> dataArray, Entity e, LookupData data, int2 pos, int2 size, int mapWidth)
+    private void RemoveDeletedEntities()
+    {
+        if (m_deletedQuery != default && !m_deletedQuery.IsEmptyIgnoreFilter)
+        {
+            // Remove deleted
+            RemoveJob job;
+            job.DataHandle = GetComponentTypeHandle<LookupInternalData>(true);
+            job.EntityLookup = GetBufferFromEntity<LookupEntity>(false);
+            job.EntityLookupData = GetBufferFromEntity<LookupData>(false);
+            job.Singleton = m_lookup;
+            job.MapWidth = m_settings.MapSize.x;
+            Dependency = job.ScheduleSingle(m_deletedQuery, Dependency); // TODO: Could schedule parallel, entities don't overlap, even if they do, writing null is safe
+
+            // Remove system component
+            m_cmdSystem.CreateCommandBuffer().RemoveComponent(m_deletedQuery, typeof(LookupInternalData));
+            m_cmdSystem.AddJobHandleForProducer(Dependency);
+        }
+    }
+
+    private void AddNewEntities()
+    {
+        //NativeArray<JobHandle> dependencies = new NativeArray<JobHandle>(m_elements.Count, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+
+        for (int i = 0; i < m_elements.Count; i++)
+        {
+            // TODO: Could run in parallel, entities don't overlap
+            var element = m_elements[i];
+            if (!element.AddedQuery.IsEmpty)
+            {
+                AddJob job;
+                job.Entities = GetEntityTypeHandle();
+                job.Positions = GetComponentTypeHandle<Position>(true);
+                job.Sizes = GetComponentTypeHandle<Size>(true);
+                job.Filters = GetComponentTypeHandle<LookupComponentFilters>(true);
+                job.EntityLookup = GetBufferFromEntity<LookupEntity>(false);
+                job.EntityLookupData = GetBufferFromEntity<LookupData>(false);
+                job.Singleton = m_lookup;
+                job.ComponentTypeIndex = element.ComponentTypeIndex;
+                job.MapWidth = m_settings.MapSize.x;
+                job.Buffer = m_cmdSystem.CreateCommandBuffer();
+                Dependency = job.ScheduleSingle(element.AddedQuery, Dependency); // TODO: Could schedule parallel, entities don't overlap
+                m_cmdSystem.AddJobHandleForProducer(Dependency);
+            }
+        }
+
+        //var result = JobHandle.CombineDependencies(dependencies);
+        //dependencies.Dispose();
+        //m_cmdSystem.AddJobHandleForProducer(result);
+
+        //var mapSize = m_settings.MapSize;
+        //var singleton = m_lookup;
+        //var cmdBuffer = m_cmdSystem.CreateCommandBuffer();
+        //var entityLookup = GetBufferFromEntity<LookupEntity>(false);
+        //var entityLookupData = GetBufferFromEntity<LookupData>(false);
+        //var filters = GetComponentDataFromEntity<LookupComponentFilters>(true);
+        //var sizes = GetComponentDataFromEntity<Size>(true);
+
+        //// TODO: This will have to run on multiple jobs probably
+        //// Add new
+        //Entities.WithReadOnly(filters).WithReadOnly(sizes).WithNone<LookupInternalData>().ForEach((Entity e, in LookupComponent lookup, in Position position) =>
+        //{
+        //    int2 size = sizes.HasComponent(e) ? (int2)sizes[e].Value : int2.zero;
+        //    byte filter = filters.HasComponent(e) ? filters[e].Value : default;
+
+        //    LookupData element = new LookupData(lookup.ComponentTypeIndex, filter);
+        //    LookupInternalData data = new LookupInternalData { Position = (int2)position.Value, Size = size };
+        //    SetLookupData(entityLookup[singleton], entityLookupData[singleton], e, element, data.Position, data.Size, mapSize.x);
+        //    cmdBuffer.AddComponent(e, data);
+        //}).Schedule();
+    }
+
+    private void UpdateEntitiesWithChangedFilters()
+    {
+        if (!m_changedEntitiesQuery.IsEmpty)
+        {
+            var mapSize = m_settings.MapSize;
+            var singleton = m_lookup;
+            var entityLookup = GetBufferFromEntity<LookupEntity>(false);
+            var entityLookupData = GetBufferFromEntity<LookupData>(false);
+            var sizes = GetComponentDataFromEntity<Size>(true);
+
+            // Handle changed LookupComponentFilters
+            Entities.WithReadOnly(sizes).WithChangeFilter<LookupComponentFilters>().WithStoreEntityQueryInField(ref m_changedEntitiesQuery).ForEach((Entity e, in LookupInternalData data, in Position position, in LookupComponentFilters filter) =>
+            {
+                int2 size = sizes.HasComponent(e) ? (int2)sizes[e].Value : int2.zero;
+
+                LookupData element = new LookupData(data.ComponentTypeIndex, filter.Value);
+                SetLookupFilter(entityLookupData[singleton], element, (int2)position.Value, size, mapSize.x);
+            }).Schedule(); // TODO: Could schedule parallel, entities don't overlap, even if they do, writing null is safe
+        }
+    }
+
+    protected static void SetLookupData(DynamicBuffer<LookupEntity> entityArray, DynamicBuffer<LookupData> dataArray, Entity e, LookupData data, int2 pos, int2 size, int mapWidth)
     {
         for (int x = 0; x <= size.x; x++)
         {
@@ -119,7 +290,7 @@ public class LookupSystem : SystemBase
         }
     }
 
-    static void SetLookupFilter(DynamicBuffer<LookupData> dataArray, LookupData data, int2 pos, int2 size, int mapWidth)
+    protected static void SetLookupFilter(DynamicBuffer<LookupData> dataArray, LookupData data, int2 pos, int2 size, int mapWidth)
     {
         for (int x = 0; x <= size.x; x++)
         {

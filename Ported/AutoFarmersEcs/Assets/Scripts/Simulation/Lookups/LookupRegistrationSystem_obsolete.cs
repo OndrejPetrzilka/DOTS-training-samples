@@ -9,10 +9,13 @@ using Unity.Entities;
 using Unity.Entities.UniversalDelegates;
 using Unity.Jobs;
 using Unity.Mathematics;
-using UnityEngine.XR;
 
+/// <summary>
+/// Adds <see cref="LookupComponent"/> to components entities with specific component.
+/// </summary>
 [UpdateInGroup(typeof(LookupGroup))]
-public class LookupRegistrationSystem : SystemBase
+[DisableAutoCreation]
+public class LookupRegistrationSystem_obsolete : SystemBase
 {
     public struct AddJob : IJobChunk
     {

@@ -10,12 +10,6 @@ using UnityEngine;
 [UpdateInGroup(typeof(FarmGroup))]
 public class FarmerMovement : SystemBase
 {
-    protected override void OnCreate()
-    {
-        base.OnCreate();
-        RequireSingletonForUpdate<RenderSettings>();
-    }
-
     protected override void OnUpdate()
     {
         var moveSmooth = 1f - Mathf.Pow(this.GetSettings().MovementSmooth, Time.fixedDeltaTime);

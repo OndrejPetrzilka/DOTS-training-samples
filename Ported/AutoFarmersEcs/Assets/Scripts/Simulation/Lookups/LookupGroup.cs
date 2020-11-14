@@ -5,8 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Unity.Entities;
 
-[UpdateInGroup(typeof(FixedStepSimulationSystemGroup), OrderFirst = true)]
-[UpdateAfter(typeof(BeginFixedStepSimulationEntityCommandBufferSystem))]
+[UpdateInGroup(typeof(FixedStepSimulationSystemGroup), OrderLast = true)]
+[UpdateBefore(typeof(EndFixedStepSimulationEntityCommandBufferSystem))]
 public class LookupGroup : ComponentSystemGroup
 {
 }

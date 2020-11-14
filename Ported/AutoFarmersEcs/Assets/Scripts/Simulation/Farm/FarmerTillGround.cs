@@ -26,7 +26,6 @@ public class FarmerTillGround : SystemBase
 
         m_removedWork = Query.WithAll<TillingZone>().WithNone<WorkTillGround>();
 
-        RequireSingletonForUpdate<RenderSettings>();
         RequireSingletonForUpdate<Ground>();
     }
 
@@ -38,8 +37,9 @@ public class FarmerTillGround : SystemBase
         int rockIndex = TypeManager.GetTypeIndex<RockTag>();
         int storeIndex = TypeManager.GetTypeIndex<StoreTag>();
 
+        var groundEntity = GetSingletonEntity<Ground>();
         var lookup = this.GetSingleton<LookupData>();
-        var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
+        var groundBuf = GetBuffer<Ground>(groundEntity);
 
         // Remove tilling zone when work is lost
         EntityManager.RemoveComponent(m_removedWork, typeof(TillingZone));
@@ -69,7 +69,7 @@ public class FarmerTillGround : SystemBase
                 for (int y = minY; y <= minY + height; y++)
                 {
                     int index = x + y * mapSize.x;
-                    if (!hasTarget && !ground[index].IsTilled)
+                    if (!hasTarget && !groundBuf[index].IsTilled)
                     {
                         hasTarget = true;
                     }
@@ -98,9 +98,11 @@ public class FarmerTillGround : SystemBase
 
         // Reached target
         var finishedWorkComponents = m_finishedWorkComponents;
+        var groundBuffer = GetBufferFromEntity<Ground>(false);
 
         Entities.WithAll<FarmerTag, WorkTillGround, PathFinished>().ForEach((Entity e, int entityInQueryIndex, ref RandomState rng, in TillingZone zone, in Position position) =>
         {
+            var ground = groundBuffer[groundEntity];
             var min = zone.Position;
             var max = zone.Position + zone.Size;
 

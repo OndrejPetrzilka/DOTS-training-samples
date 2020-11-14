@@ -13,6 +13,8 @@ public struct WorldSettings : IComponentData
     public int2 MapSize;
     public int StoreCount;
 
+    public int MaxRockCount;
+
     public int InitialFarmerCount;
     public int MaxFarmerCount;
 
