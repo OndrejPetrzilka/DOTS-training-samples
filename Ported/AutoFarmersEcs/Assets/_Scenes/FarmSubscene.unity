@@ -97,7 +97,8 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 0}
+  m_LightingDataAsset: {fileID: 112000004, guid: 5476db07b8411c447b1e306d31a5eabb,
+    type: 2}
   m_LightingSettings: {fileID: 4890085278179872738, guid: f2bc6d025ff303e43bf86cc1dcaad91f,
     type: 2}
 --- !u!196 &4
@@ -158,7 +159,8 @@ MonoBehaviour:
     x: 60
     y: 60
   StoreCount: 50
-  InitialFarmerCount: 0
+  MaxRockCount: 2000
+  InitialFarmerCount: 1
   MaxFarmerCount: 300
   MaxDroneCount: 1500
   MovementSmooth: 0.003
