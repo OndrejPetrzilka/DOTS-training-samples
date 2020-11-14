@@ -29,11 +29,14 @@ using Random = UnityEngine.Random;
 public class Pathfinding : SystemBase
 {
     EntityCommandBufferSystem m_cmdSystem;
+    EntityQuery m_query;
 
     protected override void OnCreate()
     {
         base.OnCreate();
         m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
+
+        RequireForUpdate(m_query);
     }
 
     protected override void OnUpdate()
@@ -48,7 +51,7 @@ public class Pathfinding : SystemBase
         BufferFromEntity<LookupData> lookupDataArray = GetBufferFromEntity<LookupData>(true);
         BufferFromEntity<LookupEntity> lookupEntityArray = GetBufferFromEntity<LookupEntity>(true);
 
-        Entities.WithReadOnly(lookupEntityArray).WithReadOnly(lookupDataArray).WithReadOnly(groundArray).WithNone<PathData>().ForEach((Entity e, int entityInQueryIndex, in FindPath search, in Position position) =>
+        Entities.WithReadOnly(lookupEntityArray).WithReadOnly(lookupDataArray).WithReadOnly(groundArray).WithNone<PathData>().WithStoreEntityQueryInField(ref m_query).ForEach((Entity e, int entityInQueryIndex, in FindPath search, in Position position) =>
         {
             var buffer = cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e);
             PathHelper.FindPath(groundArray[ground], lookupDataArray[lookup], (int2)position.Value, mapSize, nonWalkableComponentIndex, search, buffer);
