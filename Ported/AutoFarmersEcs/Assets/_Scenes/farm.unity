@@ -153,11 +153,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 266733429bda22a40b3b29c8d8b1e9df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapSize:
-    x: 60
-    y: 60
-  storeCount: 50
-  rockSpawnAttempts: 2000
   rockMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   rockMaterial: {fileID: 2100000, guid: 32151c15b456399478eea1583b8fece6, type: 2}
   plantMaterial: {fileID: 2100000, guid: 8907cc0a8ccd517458a182638104c97e, type: 2}
@@ -165,6 +160,10 @@ MonoBehaviour:
   groundMaterial: {fileID: 2100000, guid: 1a7e14a4d6de2cb4db04611495ac866e, type: 2}
   storeMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   storeMaterial: {fileID: 2100000, guid: 0c6231ce0d2f0724c95a7dc30122b4a0, type: 2}
+  farmerMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  farmerMaterial: {fileID: 2100000, guid: d5df058b269f73f419ae386aa3adbc0f, type: 2}
+  droneMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  droneMaterial: {fileID: 2100000, guid: 2ed50a8b29fa6db4585cadc189152d6f, type: 2}
   soldPlantYCurve:
     serializedVersion: 2
     m_Curve:
@@ -255,16 +254,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 0
-  farmerMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
-  farmerMaterial: {fileID: 2100000, guid: d5df058b269f73f419ae386aa3adbc0f, type: 2}
-  initialFarmerCount: 0
-  maxFarmerCount: 300
-  movementSmooth: 0.003
-  droneMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
-  droneMaterial: {fileID: 2100000, guid: 2ed50a8b29fa6db4585cadc189152d6f, type: 2}
-  maxDroneCount: 1500
-  moveSmooth: 0.1
-  carrySmooth: 0.005
 --- !u!4 &113544370
 Transform:
   m_ObjectHideFlags: 0

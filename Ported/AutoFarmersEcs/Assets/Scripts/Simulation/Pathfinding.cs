@@ -33,7 +33,7 @@ public class Pathfinding : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        RequireSingletonForUpdate<Settings>();
+        RequireSingletonForUpdate<RenderSettings>();
         m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
     }
 
@@ -41,7 +41,7 @@ public class Pathfinding : SystemBase
     {
         var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
 
-        var mapSize = this.GetSettings().mapSize;
+        var mapSize = this.GetSettings().MapSize;
         var ground = GetSingletonEntity<Ground>();
         var lookup = GetSingletonEntity<LookupData>();
         int nonWalkableComponentIndex = TypeManager.GetTypeIndex<RockTag>();

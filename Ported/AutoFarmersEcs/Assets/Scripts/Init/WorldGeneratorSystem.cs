@@ -11,40 +11,36 @@ using Random = Unity.Mathematics.Random;
 [UpdateInGroup(typeof(InitializationSystemGroup))]
 public class WorldGeneratorSystem : SystemBase
 {
+    const int RockSpawnAttemps = 2000;
+
+    EntityQuery m_query;
+
     protected override void OnCreate()
     {
         base.OnCreate();
-        RequireSingletonForUpdate<GenerateWorld>();
+        m_query = Query.WithAll<WorldSettings, WorldGenerator>();
     }
 
     protected override void OnUpdate()
     {
-        var generateWorld = GetSingletonEntity<GenerateWorld>();
-        var data = EntityManager.GetComponentData<GenerateWorld>(generateWorld);
-        var settings = LoadSettings(generateWorld);
+        var entity = m_query.GetSingletonEntity();
+        var worldSettings = EntityManager.GetComponentData<WorldSettings>(entity);
 
-        uint seed = data.Seed != 0 ? (uint)data.Seed : (uint)UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-        Generate(settings, EntityManager, seed);
+        worldSettings.Seed = worldSettings.Seed != 0 ? worldSettings.Seed : (uint)UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+        EntityManager.SetComponentData(entity, worldSettings);
+        Generate(worldSettings, EntityManager, worldSettings.Seed);
 
-        EntityManager.RemoveComponent<GenerateWorld>(generateWorld);
+        EntityManager.RemoveComponent<WorldGenerator>(entity);
     }
 
-    Settings LoadSettings(Entity entity)
-    {
-        var type = typeof(Settings).Assembly.GetType($"{nameof(Settings)}Authoring");
-        var instance = (IConvertGameObjectToEntity)Object.FindObjectOfType(type);
-        instance.Convert(entity, EntityManager, null);
-        return EntityManager.GetComponentData<Settings>(entity);
-    }
-
-    private static void Generate(Settings settings, EntityManager manager, uint seed)
+    private static void Generate(WorldSettings settings, EntityManager manager, uint seed)
     {
         Random rng = new Random(seed);
 
         // Ground
         var ground = manager.CreateEntity();
         var buffer = manager.AddBuffer<Ground>(ground);
-        buffer.Length = settings.mapSize.x * settings.mapSize.y;
+        buffer.Length = settings.MapSize.x * settings.MapSize.y;
         for (int i = 0; i < buffer.Length; i++)
         {
             buffer[i] = new Ground { Till = rng.NextFloat() * 0.2f };
@@ -52,12 +48,12 @@ public class WorldGeneratorSystem : SystemBase
 
         // Stores
         var storeArch = manager.CreateArchetype(typeof(StoreTag), typeof(Position));
-        bool[,] stores = new bool[settings.mapSize.x, settings.mapSize.y];
+        bool[,] stores = new bool[settings.MapSize.x, settings.MapSize.y];
         int spawnedStores = 0;
-        while (spawnedStores < settings.storeCount)
+        while (spawnedStores < settings.StoreCount)
         {
-            int x = rng.NextInt(0, settings.mapSize.x);
-            int y = rng.NextInt(0, settings.mapSize.y);
+            int x = rng.NextInt(0, settings.MapSize.x);
+            int y = rng.NextInt(0, settings.MapSize.y);
             if (stores[x, y] == false)
             {
                 var store = manager.CreateEntity(storeArch);
@@ -71,14 +67,14 @@ public class WorldGeneratorSystem : SystemBase
 
         // Rocks
         var rockArchetype = manager.CreateArchetype(typeof(RockTag), typeof(Position), typeof(Depth), typeof(Size), typeof(Health));
-        bool[,] rocks = new bool[settings.mapSize.x, settings.mapSize.y];
+        bool[,] rocks = new bool[settings.MapSize.x, settings.MapSize.y];
 
-        for (int i = 0; i < settings.rockSpawnAttempts; i++)
+        for (int i = 0; i < RockSpawnAttemps; i++)
         {
             int width = rng.NextInt(0, 4);
             int height = rng.NextInt(0, 4);
-            int rockX = rng.NextInt(0, settings.mapSize.x - width);
-            int rockY = rng.NextInt(0, settings.mapSize.y - height);
+            int rockX = rng.NextInt(0, settings.MapSize.x - width);
+            int rockY = rng.NextInt(0, settings.MapSize.y - height);
             RectInt rect = new RectInt(rockX, rockY, width, height);
 
             bool blocked = false;
@@ -116,9 +112,9 @@ public class WorldGeneratorSystem : SystemBase
         var farmerArchetype = manager.CreateArchetype(typeof(FarmerTag), typeof(Position), typeof(SmoothPosition), typeof(Offset));
 
         int farmerCount = 0;
-        while (farmerCount < settings.initialFarmerCount)
+        while (farmerCount < settings.InitialFarmerCount)
         {
-            var spawnPos = new int2(rng.NextInt(0, settings.mapSize.x), rng.NextInt(0, settings.mapSize.y));
+            var spawnPos = new int2(rng.NextInt(0, settings.MapSize.x), rng.NextInt(0, settings.MapSize.y));
             if (!stores[spawnPos.x, spawnPos.y] && !rocks[spawnPos.x, spawnPos.y])
             {
                 var pos = new float2(spawnPos.x + 0.5f, spawnPos.y + 0.5f);

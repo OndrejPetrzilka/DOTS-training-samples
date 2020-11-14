@@ -7,6 +7,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
+[DisableAutoCreation]
 [UpdateInGroup(typeof(LookupGroup))]
 public class RockLookupSystem : SystemBase
 {
@@ -16,9 +17,14 @@ public class RockLookupSystem : SystemBase
         public int2 Size;
     }
 
+    struct RockLookup : IBufferElementData
+    {
+        public Entity Entity;
+    }
+
     EntityQuery m_deletedRocks;
     EntityCommandBufferSystem m_cmdBuffer;
-    Settings m_settings;
+    WorldSettings m_settings;
     Entity m_lookup;
     DynamicBuffer<RockLookup> m_lookupBuffer;
 
@@ -30,11 +36,11 @@ public class RockLookupSystem : SystemBase
 
     protected override void OnStartRunning()
     {
-        m_settings = EntityManager.CreateEntityQuery(typeof(Settings)).GetSingleton<Settings>();
+        m_settings = EntityManager.CreateEntityQuery(typeof(WorldSettings)).GetSingleton<WorldSettings>();
         m_lookup = EntityManager.CreateEntity();
         EntityManager.SetName(m_lookup, "RockLookup");
         m_lookupBuffer = EntityManager.AddBuffer<RockLookup>(m_lookup);
-        m_lookupBuffer.Initialize(m_settings.mapSize.x * m_settings.mapSize.y);
+        m_lookupBuffer.Initialize(m_settings.MapSize.x * m_settings.MapSize.y);
     }
 
     protected override void OnStopRunning()
@@ -45,7 +51,7 @@ public class RockLookupSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        var mapSize = m_settings.mapSize;
+        var mapSize = m_settings.MapSize;
         var lookup = m_lookupBuffer;
 
         // Rocks are immovable, change filter to update position not needed

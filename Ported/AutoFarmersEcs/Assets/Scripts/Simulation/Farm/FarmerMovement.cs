@@ -13,12 +13,12 @@ public class FarmerMovement : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        RequireSingletonForUpdate<Settings>();
+        RequireSingletonForUpdate<RenderSettings>();
     }
 
     protected override void OnUpdate()
     {
-        var moveSmooth = 1f - Mathf.Pow(this.GetSettings().movementSmooth, Time.fixedDeltaTime);
+        var moveSmooth = 1f - Mathf.Pow(this.GetSettings().MovementSmooth, Time.fixedDeltaTime);
 
         Entities.ForEach((ref SmoothPosition smoothPosition, in Position position) =>
         {

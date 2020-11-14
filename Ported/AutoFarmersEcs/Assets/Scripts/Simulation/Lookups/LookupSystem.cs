@@ -20,39 +20,42 @@ public class LookupSystem : SystemBase
 
     EntityQuery m_deletedQuery;
     EntityCommandBufferSystem m_cmdSystem;
-    Settings m_settings;
+    WorldSettings m_settings;
     Entity m_lookup;
-    DynamicBuffer<LookupEntity> m_lookupEntityBuffer;
-    DynamicBuffer<LookupData> m_lookupDataBuffer;
 
     protected override void OnCreate()
     {
         base.OnCreate();
         m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
+
+        m_lookup = EntityManager.CreateEntity();
+        EntityManager.SetName(m_lookup, "Lookup");
+        EntityManager.AddBuffer<LookupEntity>(m_lookup);
+        EntityManager.AddBuffer<LookupData>(m_lookup);
+    }
+
+    protected override void OnDestroy()
+    {
+        m_lookup = Entity.Null;
+        EntityManager.DestroyEntity(m_lookup);
+        base.OnDestroy();
     }
 
     protected override void OnStartRunning()
     {
-        m_settings = EntityManager.CreateEntityQuery(typeof(Settings)).GetSingleton<Settings>();
+        base.OnStartRunning();
 
-        m_lookup = EntityManager.CreateEntity();
-        EntityManager.SetName(m_lookup, "Lookup");
-        m_lookupEntityBuffer = EntityManager.AddBuffer<LookupEntity>(m_lookup);
-        m_lookupDataBuffer = EntityManager.AddBuffer<LookupData>(m_lookup);
-        m_lookupEntityBuffer.Initialize(m_settings.mapSize.x * m_settings.mapSize.y);
-        m_lookupDataBuffer.Initialize(m_settings.mapSize.x * m_settings.mapSize.y);
-    }
-
-    protected override void OnStopRunning()
-    {
-        m_lookupEntityBuffer = default;
-        m_lookupDataBuffer = default;
-        EntityManager.DestroyEntity(m_lookup);
+        if (m_settings.MapSize.Equals(int2.zero))
+        {
+            m_settings = EntityManager.CreateEntityQuery(typeof(WorldSettings)).GetSingleton<WorldSettings>();
+            EntityManager.GetBuffer<LookupEntity>(m_lookup).Initialize(m_settings.MapSize.x * m_settings.MapSize.y);
+            EntityManager.GetBuffer<LookupData>(m_lookup).Initialize(m_settings.MapSize.x * m_settings.MapSize.y);
+        }
     }
 
     protected override void OnUpdate()
     {
-        var mapSize = m_settings.mapSize;
+        var mapSize = m_settings.MapSize;
         Entity singleton = m_lookup;
 
         // TODO: Change monitoring for: Position, Size, LookupComponent

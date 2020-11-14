@@ -4,8 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Entities;
+using Unity.Mathematics;
+using UnityEngine;
 
-public struct PlantLookup : IBufferElementData
+[GenerateAuthoringComponent]
+public struct WorldGenerator : IComponentData
 {
-    public Entity Entity;
 }

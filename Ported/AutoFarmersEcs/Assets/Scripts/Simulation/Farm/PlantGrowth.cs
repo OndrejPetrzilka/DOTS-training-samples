@@ -15,7 +15,7 @@ public class PlantGrowth : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        RequireSingletonForUpdate<Settings>();
+        RequireSingletonForUpdate<RenderSettings>();
 
         m_query = GetEntityQuery(new EntityQueryDesc
         {

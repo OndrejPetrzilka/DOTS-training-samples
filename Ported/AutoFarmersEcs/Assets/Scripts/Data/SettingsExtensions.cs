@@ -9,9 +9,14 @@ using Object = UnityEngine.Object;
 
 public static class SettingsExtensions
 {
-    public static Settings GetSettings(this ComponentSystemBase system)
+    public static WorldSettings GetSettings(this ComponentSystemBase system)
     {
-        var entity = system.GetSingletonEntity<Settings>();
-        return system.EntityManager.GetComponentData<Settings>(entity);
+        var entity = system.GetSingletonEntity<WorldSettings>();
+        return system.EntityManager.GetComponentData<WorldSettings>(entity);
+    }
+
+    public static RenderSettings GetRenderSettings(this ComponentSystemBase system)
+    {
+        return system.World.GetOrCreateSystem<RenderSettingsSystem>().Settings;
     }
 }

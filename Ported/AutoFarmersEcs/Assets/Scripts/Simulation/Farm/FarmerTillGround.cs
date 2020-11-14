@@ -26,19 +26,19 @@ public class FarmerTillGround : SystemBase
 
         m_removedWork = Query.WithAll<TillingZone>().WithNone<WorkTillGround>();
 
-        RequireSingletonForUpdate<Settings>();
+        RequireSingletonForUpdate<RenderSettings>();
         RequireSingletonForUpdate<Ground>();
-        RequireSingletonForUpdate<RockLookup>();
-        RequireSingletonForUpdate<StoreLookup>();
     }
 
     protected override void OnUpdate()
     {
         var settings = this.GetSettings();
-        var mapSize = settings.mapSize;
+        var mapSize = settings.MapSize;
 
-        var rocks = this.GetSingleton<RockLookup>();
-        var stores = this.GetSingleton<StoreLookup>();
+        int rockIndex = TypeManager.GetTypeIndex<RockTag>();
+        int storeIndex = TypeManager.GetTypeIndex<StoreTag>();
+
+        var lookup = this.GetSingleton<LookupData>();
         var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
 
         // Remove tilling zone when work is lost
@@ -73,7 +73,8 @@ public class FarmerTillGround : SystemBase
                     {
                         hasTarget = true;
                     }
-                    if (rocks[index].Entity != Entity.Null || stores[index].Entity != Entity.Null)
+                    int componentIndex = lookup[index].ComponentTypeIndex;
+                    if (componentIndex == rockIndex || componentIndex == storeIndex)
                     {
                         blocked = true;
                         break;

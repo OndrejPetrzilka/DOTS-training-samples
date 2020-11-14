@@ -10,15 +10,9 @@ using UnityEngine;
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 public class FarmerRendering : SystemBase
 {
-    protected override void OnCreate()
-    {
-        base.OnCreate();
-        RequireSingletonForUpdate<Settings>();
-    }
-
     protected override void OnUpdate()
     {
-        var settings = this.GetSettings();
+        var settings = this.GetRenderSettings();
         var mesh = settings.farmerMesh;
         var material = settings.farmerMaterial;
 

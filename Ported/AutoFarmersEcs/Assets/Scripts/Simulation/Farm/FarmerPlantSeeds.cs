@@ -26,7 +26,7 @@ public class FarmerPlantSeeds : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        RequireSingletonForUpdate<Settings>();
+        RequireSingletonForUpdate<RenderSettings>();
         RequireSingletonForUpdate<LookupData>();
         m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
         m_plantArchetype = EntityManager.CreateArchetype(typeof(PlantTag), typeof(Position));
@@ -39,7 +39,7 @@ public class FarmerPlantSeeds : SystemBase
     protected override void OnUpdate()
     {
         var settings = this.GetSettings();
-        var mapSize = settings.mapSize;
+        var mapSize = settings.MapSize;
 
         // Go to store to buy seeds
         this.AddComponentData(m_needsSeeds, FindPath.Create<StoreTag>());

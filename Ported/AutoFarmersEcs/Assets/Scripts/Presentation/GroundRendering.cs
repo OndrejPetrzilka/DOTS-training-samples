@@ -26,15 +26,15 @@ public class GroundRendering : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        RequireSingletonForUpdate<Settings>();
         RequireSingletonForUpdate<Ground>();
     }
 
     protected override void OnUpdate()
     {
         var settings = this.GetSettings();
-        var mesh = settings.groundMesh;
-        var material = settings.groundMaterial;
+        var renderSettings = this.GetRenderSettings();
+        var mesh = renderSettings.groundMesh;
+        var material = renderSettings.groundMaterial;
         var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
 
         var rng = new Random(1);
@@ -55,8 +55,8 @@ public class GroundRendering : SystemBase
                 for (int i = 0; i < batchLen; i++)
                 {
                     int index = b * BatchSize + i;
-                    int x = index % settings.mapSize.x;
-                    int y = index / settings.mapSize.x;
+                    int x = index % settings.MapSize.x;
+                    int y = index / settings.MapSize.x;
                     Vector3 pos = new Vector3(x + .5f, 0f, y + .5f);
                     float zRot = rng.NextInt(0, 2) * 180f;
                     batch.Matrices[i] = Matrix4x4.TRS(pos, Quaternion.Euler(90f, 0f, zRot), Vector3.one);

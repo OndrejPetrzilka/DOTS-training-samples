@@ -28,11 +28,8 @@ public class FarmerSellPlants : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        RequireSingletonForUpdate<Settings>();
+        RequireSingletonForUpdate<RenderSettings>();
         RequireSingletonForUpdate<Ground>();
-        RequireSingletonForUpdate<RockLookup>();
-        RequireSingletonForUpdate<StoreLookup>();
-        RequireSingletonForUpdate<PlantLookup>();
         m_hasWork = GetEntityQuery(typeof(WorkSellPlants));
         m_farmers = GetEntityQuery(typeof(FarmerTag));
         m_plantArchetype = EntityManager.CreateArchetype(typeof(PlantTag), typeof(Position));
@@ -43,11 +40,15 @@ public class FarmerSellPlants : SystemBase
     protected override void OnUpdate()
     {
         var settings = this.GetSettings();
-        var mapSize = settings.mapSize;
-        var maxFarmerCount = settings.maxFarmerCount;
+        var mapSize = settings.MapSize;
+        var maxFarmerCount = settings.MaxFarmerCount;
 
         var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
-        var plants = this.GetSingleton<PlantLookup>();
+
+        var lookup = this.GetSingleton<LookupData>();
+        var lookupEntity = this.GetSingleton<LookupEntity>();
+        var storeIndex = TypeManager.GetTypeIndex<StoreTag>();
+        var plantIndex = TypeManager.GetTypeIndex<PlantTag>();
 
         // TODO: Use command buffer
 
@@ -57,13 +58,13 @@ public class FarmerSellPlants : SystemBase
             // Find closest plant
             float distSq = float.MaxValue;
             Entity plant = Entity.Null;
-            for (int i = 0; i < plants.Length; i++)
+            for (int i = 0; i < lookup.Length; i++)
             {
                 int2 pos = new int2(i % mapSize.x, i / mapSize.x);
                 float newDistSq = math.lengthsq(position.Value - pos);
-                if (newDistSq < distSq)
+                if (newDistSq < distSq && lookup[i].ComponentTypeIndex == plantIndex)
                 {
-                    var newEntity = plants[i].Entity;
+                    var newEntity = lookupEntity[i].Entity;
                     if (EntityManager.Exists(newEntity) && EntityManager.GetComponentData<PlantTag>(newEntity).Growth >= 1)
                     {
                         plant = newEntity;
@@ -97,7 +98,8 @@ public class FarmerSellPlants : SystemBase
         }).Run();
 
         // In job below it was invalid wihout this refresh, not sure why
-        var stores = this.GetSingleton<StoreLookup>();
+        lookup = this.GetSingleton<LookupData>();
+        lookupEntity = this.GetSingleton<LookupEntity>();
 
         // Has plant, no target
         Entities.WithStructuralChanges().WithAll<FarmerTag, WorkSellPlants, CarryingPlant>().WithNone<WorkTarget>().ForEach((Entity e, in Position position) =>
@@ -105,13 +107,13 @@ public class FarmerSellPlants : SystemBase
             // Find closest store
             float distSq = float.MaxValue;
             Entity store = Entity.Null;
-            for (int i = 0; i < stores.Length; i++)
+            for (int i = 0; i < lookup.Length; i++)
             {
                 int2 pos = new int2(i % mapSize.x, i / mapSize.x);
                 float newDistSq = math.lengthsq(position.Value - pos);
-                if (newDistSq < distSq)
+                if (newDistSq < distSq && lookup[i].ComponentTypeIndex == storeIndex)
                 {
-                    var newStore = stores[i].Entity;
+                    var newStore = lookupEntity[i].Entity;
                     if (EntityManager.Exists(newStore))
                     {
                         store = newStore;
