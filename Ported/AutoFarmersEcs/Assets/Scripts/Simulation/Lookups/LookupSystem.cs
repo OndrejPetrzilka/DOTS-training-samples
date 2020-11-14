@@ -232,27 +232,6 @@ public class LookupSystem : SystemBase
         //var result = JobHandle.CombineDependencies(dependencies);
         //dependencies.Dispose();
         //m_cmdSystem.AddJobHandleForProducer(result);
-
-        //var mapSize = m_settings.MapSize;
-        //var singleton = m_lookup;
-        //var cmdBuffer = m_cmdSystem.CreateCommandBuffer();
-        //var entityLookup = GetBufferFromEntity<LookupEntity>(false);
-        //var entityLookupData = GetBufferFromEntity<LookupData>(false);
-        //var filters = GetComponentDataFromEntity<LookupComponentFilters>(true);
-        //var sizes = GetComponentDataFromEntity<Size>(true);
-
-        //// TODO: This will have to run on multiple jobs probably
-        //// Add new
-        //Entities.WithReadOnly(filters).WithReadOnly(sizes).WithNone<LookupInternalData>().ForEach((Entity e, in LookupComponent lookup, in Position position) =>
-        //{
-        //    int2 size = sizes.HasComponent(e) ? (int2)sizes[e].Value : int2.zero;
-        //    byte filter = filters.HasComponent(e) ? filters[e].Value : default;
-
-        //    LookupData element = new LookupData(lookup.ComponentTypeIndex, filter);
-        //    LookupInternalData data = new LookupInternalData { Position = (int2)position.Value, Size = size };
-        //    SetLookupData(entityLookup[singleton], entityLookupData[singleton], e, element, data.Position, data.Size, mapSize.x);
-        //    cmdBuffer.AddComponent(e, data);
-        //}).Schedule();
     }
 
     private void UpdateEntitiesWithChangedFilters()
