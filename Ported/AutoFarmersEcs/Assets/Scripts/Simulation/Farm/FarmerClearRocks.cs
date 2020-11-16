@@ -12,9 +12,12 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(FarmGroup))]
 public class FarmerClearRocks : SystemBase
 {
+    static readonly ComponentTypes m_jobFinishedTypes = new ComponentTypes(typeof(WorkClearRocks), typeof(PathFinished), typeof(PathTarget));
+
     EntityQuery m_rocks;
+    EntityQuery m_pathFailed;
     EntityQuery m_needsPath;
-    EntityQuery m_noTarget;
+    EntityQuery m_targetReached;
 
     EntityCommandBufferSystem m_cmdSystem;
 
@@ -24,14 +27,13 @@ public class FarmerClearRocks : SystemBase
 
         m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
 
-        m_rocks = Query.WithAll<RockTag>();
-        m_needsPath = Query.WithAll<FarmerTag, WorkClearRocks>().WithNone<FindPath, PathData>();
-        m_noTarget = Query.WithAll<FarmerTag, WorkClearRocks, PathData>().WithNone<PathTarget>();
+        m_rocks = EntityManager.CreateEntityQuery(typeof(RockTag));
+        m_pathFailed = Query.WithAll<FarmerTag, WorkClearRocks, PathFailed>();
     }
 
     protected override void OnUpdate()
     {
-        var mapSize = this.GetSettings().MapSize;
+        var mapSize = Settings.MapSize;
 
         if (m_rocks.IsEmptyIgnoreFilter)
         {
@@ -41,50 +43,56 @@ public class FarmerClearRocks : SystemBase
             return;
         }
 
-        var singleCmdBuffer = m_cmdSystem.CreateCommandBuffer();
-
-        // Remove work when there's no target
-        singleCmdBuffer.RemoveComponent<WorkClearRocks>(m_noTarget);
-
-        var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+        // Remove work when path finding failed
+        if (!m_pathFailed.IsEmptyIgnoreFilter)
+        {
+            m_cmdSystem.CreateCommandBuffer().RemoveComponent<WorkClearRocks>(m_pathFailed);
+            m_cmdSystem.AddJobHandleForProducer(Dependency);
+        }
 
         // Add FindPath component
-        var findPath = FindPath.Create<RockTag>();
-        Entities.WithAll<FarmerTag, WorkClearRocks>().WithNone<FindPath, PathData>().ForEach((Entity e, int entityInQueryIndex) =>
+        if (!m_needsPath.IsEmptyIgnoreFilter)
         {
-            cmdBuffer.AddComponent(entityInQueryIndex, e, findPath);
-        }).Schedule();
+            var findPath = FindPath.Create<RockTag>();
+            var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+            Entities.WithAll<FarmerTag, WorkClearRocks>().WithNone<FindPath, PathTarget, PathFailed>().WithStoreEntityQueryInField(ref m_needsPath).ForEach((Entity e, int entityInQueryIndex) =>
+            {
+                cmdBuffer.AddComponent(entityInQueryIndex, e, findPath);
+            }).ScheduleParallel();
 
-        var positions = GetComponentDataFromEntity<Position>(true);
-        var healths = GetComponentDataFromEntity<Health>(false);
-
-        var jobFinishedTypes = new ComponentTypes(typeof(WorkClearRocks), typeof(PathFinished), typeof(PathData), typeof(PathTarget));
+            m_cmdSystem.AddJobHandleForProducer(Dependency);
+        }
 
         // Reached target
-        Entities.WithAll<FarmerTag, WorkClearRocks, PathFinished>().WithReadOnly(positions).ForEach((Entity e, int entityInQueryIndex, DynamicBuffer<PathData> path, ref Offset offset, ref RandomState rng, in SmoothPosition smoothPosition, in PathTarget target) =>
+        if (!m_targetReached.IsEmptyIgnoreFilter)
         {
-            // Attack rock
-            Health health = default;
-            if (positions.HasComponent(target.Entity))
+            var positions = GetComponentDataFromEntity<Position>(true);
+            var healths = GetComponentDataFromEntity<Health>(false);
+            var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+            Entities.WithAll<FarmerTag, WorkClearRocks, PathFinished>().WithReadOnly(positions).WithStoreEntityQueryInField(ref m_targetReached).ForEach((Entity e, int entityInQueryIndex, ref Offset offset, ref RandomState rng, in SmoothPosition smoothPosition, in PathTarget target) =>
             {
-                var rockPosition = positions[target.Entity].Value;
-                health = healths[target.Entity];
-                health.Value -= 1;
-                healths[target.Entity] = health;
+                // Attack rock
+                Health health = default;
+                if (positions.HasComponent(target.Entity))
+                {
+                    var rockPosition = positions[target.Entity].Value;
+                    health = healths[target.Entity];
+                    health.Value -= 1;
+                    healths[target.Entity] = health;
 
+                    if (health.Value <= 0)
+                    {
+                        cmdBuffer.DestroyEntity(entityInQueryIndex, target.Entity);
+                    }
+
+                    offset.Value = math.normalizesafe(rockPosition - smoothPosition.Value) * 0.5f * rng.Rng.NextFloat();
+                }
                 if (health.Value <= 0)
                 {
-                    cmdBuffer.DestroyEntity(entityInQueryIndex, target.Entity);
+                    cmdBuffer.RemoveComponent(entityInQueryIndex, e, m_jobFinishedTypes);
                 }
-
-                offset.Value = math.normalizesafe(rockPosition - smoothPosition.Value) * 0.5f * rng.Rng.NextFloat();
-            }
-            if (health.Value <= 0)
-            {
-                cmdBuffer.RemoveComponent(entityInQueryIndex, e, jobFinishedTypes);
-            }
-        }).Schedule();
-
-        m_cmdSystem.AddJobHandleForProducer(Dependency);
+            }).Schedule();
+            m_cmdSystem.AddJobHandleForProducer(Dependency);
+        }
     }
 }

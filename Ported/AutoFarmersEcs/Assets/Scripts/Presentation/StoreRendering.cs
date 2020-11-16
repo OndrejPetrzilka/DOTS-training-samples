@@ -9,11 +9,18 @@ using UnityEngine;
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 public class StoreRendering : SystemBase
 {
+    RenderSettings m_settings;
+
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        m_settings = this.GetRenderSettings();
+    }
+
     protected override void OnUpdate()
     {
-        var settings = this.GetRenderSettings();
-        var mesh = settings.storeMesh;
-        var material = settings.storeMaterial;
+        var mesh = m_settings.storeMesh;
+        var material = m_settings.storeMaterial;
 
         Entities.WithoutBurst().WithAll<StoreTag>().ForEach((Entity entity, in Position position) =>
         {

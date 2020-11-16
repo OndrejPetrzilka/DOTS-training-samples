@@ -12,7 +12,7 @@ public class FarmerMovement : SystemBase
 {
     protected override void OnUpdate()
     {
-        var moveSmooth = 1f - Mathf.Pow(this.GetSettings().MovementSmooth, Time.fixedDeltaTime);
+        var moveSmooth = 1f - Mathf.Pow(Settings.MovementSmooth, Time.fixedDeltaTime);
 
         Entities.ForEach((ref SmoothPosition smoothPosition, in Position position) =>
         {

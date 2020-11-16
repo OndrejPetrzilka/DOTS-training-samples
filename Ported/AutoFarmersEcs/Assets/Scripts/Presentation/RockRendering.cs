@@ -10,11 +10,18 @@ using UnityEngine;
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 public class RockRendering : SystemBase
 {
+    RenderSettings m_settings;
+
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        m_settings = this.GetRenderSettings();
+    }
+
     protected override void OnUpdate()
     {
-        var settings = this.GetRenderSettings();
-        var mesh = settings.rockMesh;
-        var material = settings.rockMaterial;
+        var mesh = m_settings.rockMesh;
+        var material = m_settings.rockMaterial;
 
         Entities.WithoutBurst().WithAll<RockTag>().ForEach((Entity entity, in Position position, in Size size, in Depth depth) =>
         {

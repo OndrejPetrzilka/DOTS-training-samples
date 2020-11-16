@@ -20,6 +20,7 @@ public class GroundRendering : SystemBase
     const int BatchSize = 1023; // DrawMeshInstanced limitation
     int size = -1;
 
+    RenderSettings m_settings;
     Batch[] m_batches;
     float[] m_tmpTill = new float[BatchSize];
 
@@ -27,14 +28,14 @@ public class GroundRendering : SystemBase
     {
         base.OnCreate();
         RequireSingletonForUpdate<Ground>();
+        m_settings = this.GetRenderSettings();
     }
 
     protected override void OnUpdate()
     {
-        var settings = this.GetSettings();
-        var renderSettings = this.GetRenderSettings();
-        var mesh = renderSettings.groundMesh;
-        var material = renderSettings.groundMaterial;
+        var mapSize = Settings.MapSize;
+        var mesh = m_settings.groundMesh;
+        var material = m_settings.groundMaterial;
         var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
 
         var rng = new Random(1);
@@ -55,8 +56,8 @@ public class GroundRendering : SystemBase
                 for (int i = 0; i < batchLen; i++)
                 {
                     int index = b * BatchSize + i;
-                    int x = index % settings.MapSize.x;
-                    int y = index / settings.MapSize.x;
+                    int x = index % mapSize.x;
+                    int y = index / mapSize.x;
                     Vector3 pos = new Vector3(x + .5f, 0f, y + .5f);
                     float zRot = rng.NextInt(0, 2) * 180f;
                     batch.Matrices[i] = Matrix4x4.TRS(pos, Quaternion.Euler(90f, 0f, zRot), Vector3.one);

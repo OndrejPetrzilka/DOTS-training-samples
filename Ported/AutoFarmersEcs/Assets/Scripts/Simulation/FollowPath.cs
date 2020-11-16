@@ -8,26 +8,42 @@ using Unity.Mathematics;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
+/// <summary>
+/// Inputs: PathData, Position, ~PathFinished
+/// Outputs: PathFinished
+/// </summary>
 [UpdateInGroup(typeof(FixedStepSimulationSystemGroup))]
 public class FollowPath : SystemBase
 {
+    EntityCommandBufferSystem m_cmdSystem;
+
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
+    }
+
     protected override void OnUpdate()
     {
         float walkSpeed = 4;
         float deltaTime = Time.fixedDeltaTime;
 
-        Entities.WithStructuralChanges().WithNone<PathFinished>().ForEach((Entity e, DynamicBuffer<PathData> path, ref Position position) =>
+        var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+
+        Entities.WithNone<PathFinished>().ForEach((Entity e, int entityInQueryIndex, DynamicBuffer<PathData> path, ref Position position) =>
         {
             int2 pos = (int2)math.floor(position.Value);
             if (path.Length == 0)
             {
-                EntityManager.AddComponent<PathFinished>(e);
+                cmdBuffer.RemoveComponent<PathData>(entityInQueryIndex, e);
+                cmdBuffer.AddComponent<PathFinished>(entityInQueryIndex, e);
             }
             else if (math.all(path[path.Length - 1].Position == pos))
             {
                 if (path.Length == 1)
                 {
-                    EntityManager.AddComponent<PathFinished>(e);
+                    cmdBuffer.RemoveComponent<PathData>(entityInQueryIndex, e);
+                    cmdBuffer.AddComponent<PathFinished>(entityInQueryIndex, e);
                 }
                 else
                 {
@@ -47,6 +63,8 @@ public class FollowPath : SystemBase
                     position.Value = Vector2.MoveTowards(position.Value, targetPos, walkSpeed * deltaTime);
                 }
             }
-        }).Run();
+        }).ScheduleParallel();
+
+        m_cmdSystem.AddJobHandleForProducer(Dependency);
     }
 }

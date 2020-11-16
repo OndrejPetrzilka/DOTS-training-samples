@@ -113,17 +113,12 @@ public class LookupSystem : SystemBase
     EntityQuery m_deletedQuery;
     List<Element> m_elements = new List<Element>();
     EntityCommandBufferSystem m_cmdSystem;
-    WorldSettings m_settings;
     Entity m_lookup;
+    bool m_initialized = false;
 
     public EntityQuery DeletedQuery
     {
         get { return m_deletedQuery; }
-    }
-
-    public WorldSettings Settings
-    {
-        get { return m_settings; }
     }
 
     protected override void OnCreate()
@@ -160,6 +155,7 @@ public class LookupSystem : SystemBase
 
     protected override void OnDestroy()
     {
+        m_initialized = false;
         m_lookup = Entity.Null;
         EntityManager.DestroyEntity(m_lookup);
         base.OnDestroy();
@@ -169,11 +165,11 @@ public class LookupSystem : SystemBase
     {
         base.OnStartRunning();
 
-        if (m_settings.MapSize.Equals(int2.zero))
+        if (!m_initialized)
         {
-            m_settings = EntityManager.CreateEntityQuery(typeof(WorldSettings)).GetSingleton<WorldSettings>();
-            EntityManager.GetBuffer<LookupEntity>(m_lookup).Initialize(m_settings.MapSize.x * m_settings.MapSize.y);
-            EntityManager.GetBuffer<LookupData>(m_lookup).Initialize(m_settings.MapSize.x * m_settings.MapSize.y);
+            EntityManager.GetBuffer<LookupEntity>(m_lookup).Initialize(Settings.MapSize.x * Settings.MapSize.y);
+            EntityManager.GetBuffer<LookupData>(m_lookup).Initialize(Settings.MapSize.x * Settings.MapSize.y);
+            m_initialized = true;
         }
     }
 
@@ -194,7 +190,7 @@ public class LookupSystem : SystemBase
             job.EntityLookup = GetBufferFromEntity<LookupEntity>(false);
             job.EntityLookupData = GetBufferFromEntity<LookupData>(false);
             job.Singleton = m_lookup;
-            job.MapWidth = m_settings.MapSize.x;
+            job.MapWidth = Settings.MapSize.x;
             Dependency = job.ScheduleSingle(m_deletedQuery, Dependency); // TODO: Could schedule parallel, entities don't overlap, even if they do, writing null is safe
 
             // Remove system component
@@ -222,7 +218,7 @@ public class LookupSystem : SystemBase
                 job.EntityLookupData = GetBufferFromEntity<LookupData>(false);
                 job.Singleton = m_lookup;
                 job.ComponentTypeIndex = element.ComponentTypeIndex;
-                job.MapWidth = m_settings.MapSize.x;
+                job.MapWidth = Settings.MapSize.x;
                 job.Buffer = m_cmdSystem.CreateCommandBuffer();
                 Dependency = job.ScheduleSingle(element.AddedQuery, Dependency); // TODO: Could schedule parallel, entities don't overlap
                 m_cmdSystem.AddJobHandleForProducer(Dependency);
@@ -238,7 +234,7 @@ public class LookupSystem : SystemBase
     {
         if (!m_changedEntitiesQuery.IsEmpty)
         {
-            var mapSize = m_settings.MapSize;
+            var mapSize = Settings.MapSize;
             var singleton = m_lookup;
             var entityLookup = GetBufferFromEntity<LookupEntity>(false);
             var entityLookupData = GetBufferFromEntity<LookupData>(false);

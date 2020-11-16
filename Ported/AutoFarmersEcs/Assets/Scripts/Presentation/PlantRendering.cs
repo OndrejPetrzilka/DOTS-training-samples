@@ -12,10 +12,17 @@ public class PlantRendering : SystemBase
 {
     Dictionary<int, Mesh> m_plants = new Dictionary<int, Mesh>(32);
 
+    RenderSettings m_settings;
+
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        m_settings = this.GetRenderSettings();
+    }
+
     protected override void OnUpdate()
     {
-        var settings = this.GetRenderSettings();
-        var material = settings.plantMaterial;
+        var material = m_settings.plantMaterial;
 
         material.SetFloat("_Growth", 1);
 

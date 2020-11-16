@@ -9,14 +9,14 @@ using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
 [UpdateInGroup(typeof(InitializationSystemGroup))]
-public class RenderSettingsSystem : SystemBase
+public class RenderSettingsSystem : Unity.Entities.SystemBase
 {
-    public RenderSettings Settings;
+    public RenderSettings RenderSettings;
 
     protected override void OnCreate()
     {
         base.OnCreate();
-        Settings = Object.FindObjectOfType<RenderSettings>();
+        RenderSettings = Object.FindObjectOfType<RenderSettings>();
     }
 
     protected override void OnUpdate()

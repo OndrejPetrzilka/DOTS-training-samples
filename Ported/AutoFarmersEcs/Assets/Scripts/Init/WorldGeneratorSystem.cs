@@ -9,7 +9,7 @@ using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
 [UpdateInGroup(typeof(InitializationSystemGroup), OrderLast = true)]
-[UpdateBefore(typeof(EndInitializationEntityCommandBufferSystem))]
+[UpdateAfter(typeof(WorldSettingsSystem))]
 public class WorldGeneratorSystem : SystemBase
 {
     EntityQuery m_query;

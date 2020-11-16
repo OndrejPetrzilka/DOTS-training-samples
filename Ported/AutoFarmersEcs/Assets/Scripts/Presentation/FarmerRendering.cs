@@ -10,11 +10,18 @@ using UnityEngine;
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 public class FarmerRendering : SystemBase
 {
+    RenderSettings m_settings;
+
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        m_settings = this.GetRenderSettings();
+    }
+
     protected override void OnUpdate()
     {
-        var settings = this.GetRenderSettings();
-        var mesh = settings.farmerMesh;
-        var material = settings.farmerMaterial;
+        var mesh = m_settings.farmerMesh;
+        var material = m_settings.farmerMaterial;
 
         Entities.WithoutBurst().WithAll<FarmerTag>().ForEach((Entity entity, in SmoothPosition smoothPosition) =>
         {

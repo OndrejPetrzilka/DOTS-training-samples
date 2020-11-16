@@ -10,6 +10,7 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 
 [UpdateInGroup(typeof(FarmGroup))]
+[DisableAutoCreation]
 public class FarmerPlantSeeds : SystemBase
 {
     struct BuyingSeedsTag : IComponentData
@@ -37,8 +38,7 @@ public class FarmerPlantSeeds : SystemBase
 
     protected override void OnUpdate()
     {
-        var settings = this.GetSettings();
-        var mapSize = settings.MapSize;
+        var mapSize = Settings.MapSize;
 
         // Go to store to buy seeds
         this.AddComponentData(m_needsSeeds, FindPath.Create<StoreTag>());

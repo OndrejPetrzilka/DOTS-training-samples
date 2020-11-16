@@ -10,6 +10,7 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 
 [UpdateInGroup(typeof(FarmGroup))]
+[DisableAutoCreation]
 public class FarmerSellPlants : SystemBase
 {
     EntityQuery m_hasWork;
@@ -38,9 +39,8 @@ public class FarmerSellPlants : SystemBase
 
     protected override void OnUpdate()
     {
-        var settings = this.GetSettings();
-        var mapSize = settings.MapSize;
-        var maxFarmerCount = settings.MaxFarmerCount;
+        var mapSize = Settings.MapSize;
+        var maxFarmerCount = Settings.MaxFarmerCount;
 
         var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
 

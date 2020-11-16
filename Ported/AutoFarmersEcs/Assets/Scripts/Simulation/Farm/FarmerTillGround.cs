@@ -11,6 +11,7 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 
 [UpdateInGroup(typeof(FarmGroup))]
+[DisableAutoCreation]
 public class FarmerTillGround : SystemBase
 {
     EntityQuery m_removedWork;
@@ -31,8 +32,7 @@ public class FarmerTillGround : SystemBase
 
     protected override void OnUpdate()
     {
-        var settings = this.GetSettings();
-        var mapSize = settings.MapSize;
+        var mapSize = Settings.MapSize;
 
         int rockIndex = TypeManager.GetTypeIndex<RockTag>();
         int storeIndex = TypeManager.GetTypeIndex<StoreTag>();
