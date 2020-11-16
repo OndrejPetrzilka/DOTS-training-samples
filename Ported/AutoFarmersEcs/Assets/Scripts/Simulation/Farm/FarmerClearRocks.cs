@@ -66,6 +66,7 @@ public class FarmerClearRocks : SystemBase
         // Reached target
         if (!m_targetReached.IsEmptyIgnoreFilter)
         {
+            var jobFinishedTypes = m_jobFinishedTypes;
             var positions = GetComponentDataFromEntity<Position>(true);
             var healths = GetComponentDataFromEntity<Health>(false);
             var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
@@ -89,7 +90,7 @@ public class FarmerClearRocks : SystemBase
                 }
                 if (health.Value <= 0)
                 {
-                    cmdBuffer.RemoveComponent(entityInQueryIndex, e, m_jobFinishedTypes);
+                    cmdBuffer.RemoveComponent(entityInQueryIndex, e, jobFinishedTypes);
                 }
             }).Schedule();
             m_cmdSystem.AddJobHandleForProducer(Dependency);
