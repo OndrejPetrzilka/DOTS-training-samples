@@ -34,6 +34,9 @@ public class LookupSystem : SystemBase
     struct RemoveJob : IJobChunk
     {
         [ReadOnly]
+        public EntityTypeHandle Entities;
+
+        [ReadOnly]
         public Entity Singleton;
 
         public int MapWidth;
@@ -44,8 +47,12 @@ public class LookupSystem : SystemBase
         public BufferFromEntity<LookupEntity> EntityLookup;
         public BufferFromEntity<LookupData> EntityLookupData;
 
+        public EntityCommandBuffer Buffer;
+
         public void Execute(ArchetypeChunk chunk, int chunkIndex, int firstEntityIndex)
         {
+            var entities = chunk.GetNativeArray(Entities);
+
             var lookupBuffer = EntityLookup[Singleton];
             var lookupDataBuffer = EntityLookupData[Singleton];
             var datas = chunk.GetNativeArray(DataHandle);
@@ -54,6 +61,7 @@ public class LookupSystem : SystemBase
             {
                 var data = datas[i];
                 SetLookupData(lookupBuffer, lookupDataBuffer, Entity.Null, default, data.Position, data.Size, MapWidth);
+                Buffer.RemoveComponent(entities[i], typeof(LookupInternalData));
             }
         }
     }
@@ -191,10 +199,12 @@ public class LookupSystem : SystemBase
             job.EntityLookupData = GetBufferFromEntity<LookupData>(false);
             job.Singleton = m_lookup;
             job.MapWidth = Settings.MapSize.x;
+            job.Entities = GetEntityTypeHandle();
+            job.Buffer = m_cmdSystem.CreateCommandBuffer();
             Dependency = job.ScheduleSingle(m_deletedQuery, Dependency); // TODO: Could schedule parallel, entities don't overlap, even if they do, writing null is safe
 
-            // Remove system component
-            m_cmdSystem.CreateCommandBuffer().RemoveComponent(m_deletedQuery, typeof(LookupInternalData));
+            // Remove system component - this does not work, remove component must be done in job to work, don't know why
+            //m_cmdSystem.CreateCommandBuffer().RemoveComponent(m_deletedQuery, typeof(LookupInternalData));
             m_cmdSystem.AddJobHandleForProducer(Dependency);
         }
     }

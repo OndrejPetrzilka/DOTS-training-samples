@@ -39,7 +39,6 @@ public class FarmerClearRocks : SystemBase
         {
             // All rocks cleared, remove work
             m_cmdSystem.CreateCommandBuffer().RemoveComponent<WorkClearRocks>(m_needsPath);
-            m_cmdSystem.AddJobHandleForProducer(Dependency);
             return;
         }
 
@@ -47,7 +46,6 @@ public class FarmerClearRocks : SystemBase
         if (!m_pathFailed.IsEmptyIgnoreFilter)
         {
             m_cmdSystem.CreateCommandBuffer().RemoveComponent<WorkClearRocks>(m_pathFailed);
-            m_cmdSystem.AddJobHandleForProducer(Dependency);
         }
 
         // Add FindPath component
@@ -69,8 +67,8 @@ public class FarmerClearRocks : SystemBase
             var jobFinishedTypes = m_jobFinishedTypes;
             var positions = GetComponentDataFromEntity<Position>(true);
             var healths = GetComponentDataFromEntity<Health>(false);
-            var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
-            Entities.WithAll<FarmerTag, WorkClearRocks, PathFinished>().WithReadOnly(positions).WithStoreEntityQueryInField(ref m_targetReached).ForEach((Entity e, int entityInQueryIndex, ref Offset offset, ref RandomState rng, in SmoothPosition smoothPosition, in PathTarget target) =>
+            var cmdBuffer = m_cmdSystem.CreateCommandBuffer();
+            Entities.WithAll<FarmerTag, WorkClearRocks, PathFinished>().WithReadOnly(positions).WithStoreEntityQueryInField(ref m_targetReached).ForEach((Entity e, ref Offset offset, ref RandomState rng, in SmoothPosition smoothPosition, in PathTarget target) =>
             {
                 // Attack rock
                 Health health = default;
@@ -83,14 +81,14 @@ public class FarmerClearRocks : SystemBase
 
                     if (health.Value <= 0)
                     {
-                        cmdBuffer.DestroyEntity(entityInQueryIndex, target.Entity);
+                        cmdBuffer.DestroyEntity(target.Entity);
                     }
 
                     offset.Value = math.normalizesafe(rockPosition - smoothPosition.Value) * 0.5f * rng.Rng.NextFloat();
                 }
                 if (health.Value <= 0)
                 {
-                    cmdBuffer.RemoveComponent(entityInQueryIndex, e, jobFinishedTypes);
+                    cmdBuffer.RemoveComponent(e, jobFinishedTypes);
                 }
             }).Schedule();
             m_cmdSystem.AddJobHandleForProducer(Dependency);
