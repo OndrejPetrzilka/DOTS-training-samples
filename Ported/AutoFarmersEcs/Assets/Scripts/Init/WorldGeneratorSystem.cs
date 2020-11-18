@@ -111,6 +111,7 @@ public class WorldGeneratorSystem : SystemBase
         var farmerArchetype = manager.CreateArchetype(typeof(FarmerTag), typeof(Position), typeof(SmoothPosition), typeof(Offset));
 
         int farmerCount = 0;
+        int attemptCount = 0;
         while (farmerCount < settings.InitialFarmerCount)
         {
             var spawnPos = new int2(rng.NextInt(0, settings.MapSize.x), rng.NextInt(0, settings.MapSize.y));
@@ -123,6 +124,8 @@ public class WorldGeneratorSystem : SystemBase
                 manager.SetComponentData(farmer, new SmoothPosition { Value = pos });
                 farmerCount++;
             }
+            if (attemptCount++ > 10000)
+                throw new System.InvalidOperationException("Error spawning farmer, no place found");
         }
     }
 }
