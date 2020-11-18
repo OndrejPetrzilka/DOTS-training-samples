@@ -4,9 +4,11 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Jobs;
 using Unity.Entities;
 using Unity.Mathematics;
 
+[assembly: RegisterGenericJobType(typeof(AddGenericComponentJob<FindPath>))]
 public struct FindPath : IComponentData
 {
     public int ComponentTypeIndex;
