@@ -20,6 +20,16 @@ public class PlantRendering : SystemBase
         m_settings = this.GetRenderSettings();
     }
 
+    public Mesh GetPlant(int seed)
+    {
+        if (!m_plants.TryGetValue(seed, out Mesh mesh))
+        {
+            mesh = PlantGenerator.GenerateMesh(seed);
+            m_plants[seed] = mesh;
+        }
+        return mesh;
+    }
+
     protected override void OnUpdate()
     {
         var material = m_settings.plantMaterial;
@@ -31,19 +41,13 @@ public class PlantRendering : SystemBase
             Vector3 worldPos = new Vector3(position.Value.x + .5f, 0f, position.Value.y + .5f);
             //rotation = Quaternion.Euler(Random.Range(-5f, 5f), Random.value * 360f, Random.Range(-5f, 5f));
 
-            if (!m_plants.TryGetValue(plant.Seed, out Mesh mesh))
-            {
-                mesh = PlantGenerator.GenerateMesh(plant.Seed);
-                m_plants[plant.Seed] = mesh;
-            }
-
             float t = math.sqrt(plant.Growth);
             float3 scale = default;
             scale.y = t;
             scale.xz = math.smoothstep(0, 1, t * t * t * t * t) * .9f + .1f;
 
             var matrix = Matrix4x4.TRS(worldPos, Quaternion.identity, scale);
-            Graphics.DrawMesh(mesh, matrix, material, 0);
+            Graphics.DrawMesh(GetPlant(plant.Seed), matrix, material, 0);
         }).Run();
     }
 }
