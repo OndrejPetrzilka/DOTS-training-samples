@@ -15,7 +15,6 @@ public class FarmerSellPlants : SystemBase
     static readonly int m_storeIndex = TypeManager.GetTypeIndex<StoreTag>();
     static readonly int m_plantIndex = TypeManager.GetTypeIndex<PlantTag>();
     static readonly ComponentTypes m_removeJobTypes = new ComponentTypes(typeof(PathTarget), typeof(PathData), typeof(PathFinished), typeof(FindPath), typeof(CarryingPlant));
-    static readonly ComponentTypes m_pathFinishedRemoveTypes = new ComponentTypes(typeof(PathTarget), typeof(PathFinished), typeof(PathData), typeof(FindPath));
 
     EntityArchetype m_farmerArchetype;
     EntityCommandBufferSystem m_cmdSystem;
@@ -71,24 +70,24 @@ public class FarmerSellPlants : SystemBase
         {
             var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
             var plantTag = GetComponentDataFromEntity<PlantTag>(true);
-            var removeComponents = m_pathFinishedRemoveTypes;
+            var removeComponents = m_removeJobTypes;
 
             Entities.WithReadOnly(plantTag).WithAll<FarmerTag, WorkSellPlants, PathFinished>().WithNone<CarryingPlant>().WithStoreEntityQueryInField(ref m_reachedPlantQuery).ForEach((Entity e, int entityInQueryIndex, in PathTarget target, in Position position) =>
             {
                 // Carry plant
+                cmdBuffer.RemoveComponent(entityInQueryIndex, e, removeComponents);
                 if (plantTag.HasComponent(target.Entity))
                 {
                     cmdBuffer.AddComponent(entityInQueryIndex, e, new CarryingPlant { Seed = plantTag[target.Entity].Seed });
                     cmdBuffer.DestroyEntity(entityInQueryIndex, target.Entity);
                 }
-                cmdBuffer.RemoveComponent(entityInQueryIndex, e, removeComponents);
             }).ScheduleParallel();
 
             m_cmdSystem.AddJobHandleForProducer(Dependency);
         }
 
         // Find path to store
-        Dependency = m_cmdSystem.AddComponentJob(m_findStoreQuery, FindPath.Create<PlantTag>(FindPathFlags.None, 1), Dependency);
+        Dependency = m_cmdSystem.AddComponentJob(m_findStoreQuery, FindPath.Create<StoreTag>(), Dependency);
 
         // Reached store
         if (!m_sellPlantQuery.IsEmptyIgnoreFilter)
@@ -103,7 +102,7 @@ public class FarmerSellPlants : SystemBase
             int farmerBuyCount = Math.Min(m_money / 10, maxFarmerCount - startFarmerCount);
             m_money -= farmerBuyCount * 10;
 
-            Entities.WithAll<WorkSellPlants, CarryingPlant, PathTarget>().WithAll<PathFinished>().WithStoreEntityQueryInField(ref m_sellPlantQuery).ForEach((Entity e, int entityInQueryIndex, ref RandomState rng, in Position position) =>
+            Entities.WithAll<WorkSellPlants, CarryingPlant, PathFinished>().WithStoreEntityQueryInField(ref m_sellPlantQuery).ForEach((Entity e, int entityInQueryIndex, ref RandomState rng, in Position position) =>
             {
                 // Sell plant
                 int money = startMoney + entityInQueryIndex + 1;
