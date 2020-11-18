@@ -10,26 +10,27 @@ using UnityEngine;
 [UpdateInGroup(typeof(FarmGroup))]
 public class PlantGrowth : SystemBase
 {
+    EntityCommandBufferSystem m_cmdSystem;
     EntityQuery m_query;
 
     protected override void OnCreate()
     {
         base.OnCreate();
 
-        m_query = GetEntityQuery(new EntityQueryDesc
-        {
-            All = new ComponentType[] { typeof(PlantTag) },
-            None = new ComponentType[] { typeof(LookupComponentFilters) },
-        });
+        m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
+        m_query = Query.WithAll<PlantTag>().WithNone<LookupComponentFilters>();
     }
 
     protected override void OnUpdate()
     {
         float deltaTime = Time.fixedDeltaTime;
 
-        EntityManager.AddComponent<LookupComponentFilters>(m_query);
+        if (!m_query.IsEmptyIgnoreFilter)
+        {
+            m_cmdSystem.CreateCommandBuffer().AddComponent<LookupComponentFilters>(m_query);
+        }
 
-        Entities.ForEach((Entity e, ref PlantTag plant, ref LookupComponentFilters filters) =>
+        Entities.ForEach((ref PlantTag plant, ref LookupComponentFilters filters) =>
         {
             plant.Growth = Mathf.Min(plant.Growth + deltaTime / 10f, 1f);
             filters.Value = plant.Growth == 1 ? (byte)1 : (byte)0;

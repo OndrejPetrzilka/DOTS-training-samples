@@ -92,7 +92,7 @@ public class FarmerTillGround : SystemBase
                     var buffer = cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e);
                     buffer.Add(new PathData { Position = new int2(minX, minY) });
                 }
-                else if (rng.Rng.NextFloat() < .2f)
+                else
                 {
                     cmdBuffer.RemoveComponent(entityInQueryIndex, e, componentTypesRemoveWork);
                 }

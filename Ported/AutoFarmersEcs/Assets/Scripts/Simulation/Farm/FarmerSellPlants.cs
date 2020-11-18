@@ -10,16 +10,22 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 
 [UpdateInGroup(typeof(FarmGroup))]
-[DisableAutoCreation]
 public class FarmerSellPlants : SystemBase
 {
-    EntityQuery m_hasWork;
-    EntityQuery m_farmers;
-    EntityArchetype m_plantArchetype;
+    static readonly int m_storeIndex = TypeManager.GetTypeIndex<StoreTag>();
+    static readonly int m_plantIndex = TypeManager.GetTypeIndex<PlantTag>();
+    static readonly ComponentTypes m_removeJobTypes = new ComponentTypes(typeof(WorkTarget), typeof(CarryingPlant));
+
     EntityArchetype m_farmerArchetype;
-    EntityCommandBufferSystem m_cmdBufferSystem;
+    EntityCommandBufferSystem m_cmdSystem;
 
     int m_money;
+
+    EntityQuery m_farmers;
+    private EntityQuery m_findPlantQuery;
+    private EntityQuery m_reachedPlantQuery;
+    private EntityQuery m_findStoreQuery;
+    private EntityQuery m_sellPlantQuery;
 
     public int Money
     {
@@ -29,12 +35,10 @@ public class FarmerSellPlants : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        RequireSingletonForUpdate<Ground>();
-        m_hasWork = GetEntityQuery(typeof(WorkSellPlants));
-        m_farmers = GetEntityQuery(typeof(FarmerTag));
-        m_plantArchetype = EntityManager.CreateArchetype(typeof(PlantTag), typeof(Position));
         m_farmerArchetype = EntityManager.CreateArchetype(typeof(FarmerTag), typeof(Position), typeof(SmoothPosition), typeof(Offset));
-        m_cmdBufferSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
+        m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
+
+        m_farmers = EntityManager.CreateEntityQuery(typeof(FarmerTag));
     }
 
     protected override void OnUpdate()
@@ -42,130 +46,169 @@ public class FarmerSellPlants : SystemBase
         var mapSize = Settings.MapSize;
         var maxFarmerCount = Settings.MaxFarmerCount;
 
-        var ground = GetBuffer<Ground>(GetSingletonEntity<Ground>());
+        var groundEntity = GetSingletonEntity<Ground>();
+        var groundData = GetBufferFromEntity<Ground>(true);
 
-        var lookup = this.GetSingleton<LookupData>();
-        var lookupEntity = this.GetSingleton<LookupEntity>();
-        var storeIndex = TypeManager.GetTypeIndex<StoreTag>();
-        var plantIndex = TypeManager.GetTypeIndex<PlantTag>();
+        var storeIndex = m_storeIndex;
+        var plantIndex = m_plantIndex;
 
-        // TODO: Use command buffer
+        // TODO: Use some better system for finding target (either path finding or some simple external method)
 
         // Does not carry plant, find plant
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkSellPlants>().WithNone<CarryingPlant, WorkTarget>().ForEach((Entity e, in Position position) =>
+        if (!m_findPlantQuery.IsEmptyIgnoreFilter)
         {
-            // Find closest plant
-            float distSq = float.MaxValue;
-            Entity plant = Entity.Null;
-            for (int i = 0; i < lookup.Length; i++)
+            var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+
+            var lookup = GetSingletonEntity<LookupData>();
+            var lookupDataArray = GetBufferFromEntity<LookupData>(true);
+            var lookupEntityArray = GetBufferFromEntity<LookupEntity>(true);
+            var plantTag = GetComponentDataFromEntity<PlantTag>(true);
+
+            Entities.WithReadOnly(lookupDataArray).WithReadOnly(lookupEntityArray).WithReadOnly(plantTag).WithAll<FarmerTag, WorkSellPlants>().WithNone<CarryingPlant, WorkTarget>().WithStoreEntityQueryInField(ref m_findPlantQuery).ForEach((Entity e, int entityInQueryIndex, in Position position) =>
             {
-                int2 pos = new int2(i % mapSize.x, i / mapSize.x);
-                float newDistSq = math.lengthsq(position.Value - pos);
-                if (newDistSq < distSq && lookup[i].ComponentTypeIndex == plantIndex)
+                // Find closest plant
+                float distSq = float.MaxValue;
+                Entity plant = Entity.Null;
+                var lookupBuffer = lookupDataArray[lookup];
+                var lookupEntityBuffer = lookupEntityArray[lookup];
+                int2 plantPos = default;
+                for (int i = 0; i < lookupBuffer.Length; i++)
                 {
-                    var newEntity = lookupEntity[i].Entity;
-                    if (EntityManager.Exists(newEntity) && EntityManager.GetComponentData<PlantTag>(newEntity).Growth >= 1)
+                    int2 pos = new int2(i % mapSize.x, i / mapSize.x);
+                    float newDistSq = math.lengthsq(position.Value - pos);
+                    if (newDistSq < distSq && lookupBuffer[i].ComponentTypeIndex == plantIndex)
                     {
-                        plant = newEntity;
-                        distSq = newDistSq;
+                        var newEntity = lookupEntityBuffer[i].Entity;
+                        if (plantTag.HasComponent(newEntity) && plantTag[newEntity].Growth >= 1)
+                        {
+                            plant = newEntity;
+                            distSq = newDistSq;
+                            plantPos = pos;
+                        }
                     }
                 }
-            }
 
-            if (plant == Entity.Null)
-            {
-                EntityManager.RemoveComponent(e, typeof(WorkSellPlants));
-            }
-            else
-            {
-                EntityManager.AddComponentData(e, new WorkTarget { Value = plant });
-                var buffer = EntityManager.AddBuffer<PathData>(e);
-                buffer.Add(new PathData { Position = EntityManager.GetComponentData<Position>(plant).Value });
-            }
-        }).Run();
+                if (plant == Entity.Null)
+                {
+                    cmdBuffer.RemoveComponent<WorkSellPlants>(entityInQueryIndex, e);
+                }
+                else
+                {
+                    cmdBuffer.AddComponent(entityInQueryIndex, e, new WorkTarget { Value = plant });
+                    var buffer = cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e);
+                    buffer.Add(new PathData { Position = plantPos });
+                }
+            }).ScheduleParallel();
+
+            m_cmdSystem.AddJobHandleForProducer(Dependency);
+        }
 
         // Does not carry plant, reached target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkSellPlants, PathFinished>().WithNone<CarryingPlant>().ForEach((Entity e, in WorkTarget target, in Position position) =>
+        if (!m_reachedPlantQuery.IsEmptyIgnoreFilter)
         {
-            // Carry plant
-            if (EntityManager.Exists(target.Value))
-            {
-                EntityManager.AddComponentData(e, new CarryingPlant { Seed = EntityManager.GetComponentData<PlantTag>(target.Value).Seed });
-                EntityManager.DestroyEntity(target.Value);
-            }
-            EntityManager.RemoveComponent<WorkTarget>(e);
-        }).Run();
+            var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+            var plantTag = GetComponentDataFromEntity<PlantTag>(true);
 
-        // In job below it was invalid wihout this refresh, not sure why
-        lookup = this.GetSingleton<LookupData>();
-        lookupEntity = this.GetSingleton<LookupEntity>();
+            Entities.WithReadOnly(plantTag).WithAll<FarmerTag, WorkSellPlants, PathFinished>().WithNone<CarryingPlant>().WithStoreEntityQueryInField(ref m_reachedPlantQuery).ForEach((Entity e, int entityInQueryIndex, in WorkTarget target, in Position position) =>
+            {
+                // Carry plant
+                if (plantTag.HasComponent(target.Value))
+                {
+                    cmdBuffer.AddComponent(entityInQueryIndex, e, new CarryingPlant { Seed = plantTag[target.Value].Seed });
+                    cmdBuffer.DestroyEntity(entityInQueryIndex, target.Value);
+                }
+                cmdBuffer.RemoveComponent<WorkTarget>(entityInQueryIndex, e);
+            }).ScheduleParallel();
+
+            m_cmdSystem.AddJobHandleForProducer(Dependency);
+        }
 
         // Has plant, no target
-        Entities.WithStructuralChanges().WithAll<FarmerTag, WorkSellPlants, CarryingPlant>().WithNone<WorkTarget>().ForEach((Entity e, in Position position) =>
+        if (!m_findPlantQuery.IsEmptyIgnoreFilter)
         {
-            // Find closest store
-            float distSq = float.MaxValue;
-            Entity store = Entity.Null;
-            for (int i = 0; i < lookup.Length; i++)
+            var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+            var lookup = GetSingletonEntity<LookupData>();
+            var lookupDataArray = GetBufferFromEntity<LookupData>(true);
+            var lookupEntityArray = GetBufferFromEntity<LookupEntity>(true);
+            var storeTag = GetComponentDataFromEntity<StoreTag>(true);
+
+            Entities.WithReadOnly(lookupDataArray).WithReadOnly(lookupEntityArray).WithReadOnly(storeTag).WithAll<FarmerTag, WorkSellPlants, CarryingPlant>().WithNone<WorkTarget>().WithStoreEntityQueryInField(ref m_findStoreQuery).ForEach((Entity e, int entityInQueryIndex, in Position position) =>
             {
-                int2 pos = new int2(i % mapSize.x, i / mapSize.x);
-                float newDistSq = math.lengthsq(position.Value - pos);
-                if (newDistSq < distSq && lookup[i].ComponentTypeIndex == storeIndex)
+                // Find closest store
+                float distSq = float.MaxValue;
+                Entity store = Entity.Null;
+                var lookupBuffer = lookupDataArray[lookup];
+                var lookupEntityBuffer = lookupEntityArray[lookup];
+                int2 storePos = default;
+                for (int i = 0; i < lookupBuffer.Length; i++)
                 {
-                    var newStore = lookupEntity[i].Entity;
-                    if (EntityManager.Exists(newStore))
+                    int2 pos = new int2(i % mapSize.x, i / mapSize.x);
+                    float newDistSq = math.lengthsq(position.Value - pos);
+                    if (newDistSq < distSq && lookupBuffer[i].ComponentTypeIndex == storeIndex)
                     {
-                        store = newStore;
-                        distSq = newDistSq;
+                        var newStore = lookupEntityBuffer[i].Entity;
+                        if (storeTag.HasComponent(newStore))
+                        {
+                            store = newStore;
+                            distSq = newDistSq;
+                            storePos = pos;
+                        }
                     }
                 }
-            }
 
-            if (store == Entity.Null)
-            {
-                EntityManager.RemoveComponent(e, typeof(WorkPlantSeeds));
-            }
-            else
-            {
-                EntityManager.AddComponentData(e, new WorkTarget { Value = store });
-                var buffer = EntityManager.AddBuffer<PathData>(e);
-                buffer.Add(new PathData { Position = EntityManager.GetComponentData<Position>(store).Value });
-            }
-        }).Run();
+                if (store == Entity.Null)
+                {
+                    cmdBuffer.RemoveComponent<WorkSellPlants>(entityInQueryIndex, e);
+                }
+                else
+                {
+                    cmdBuffer.AddComponent(entityInQueryIndex, e, new WorkTarget { Value = store });
+                    var buffer = cmdBuffer.AddBuffer<PathData>(entityInQueryIndex, e);
+                    buffer.Add(new PathData { Position = storePos });
+                }
+            }).ScheduleParallel();
 
-        int farmerCount = m_farmers.CalculateEntityCount();
+            m_cmdSystem.AddJobHandleForProducer(Dependency);
+        }
 
         // Reached target
-        var cmdBuffer = m_cmdBufferSystem.CreateCommandBuffer();
-        Entities.WithStructuralChanges().WithAll<WorkSellPlants, CarryingPlant, WorkTarget>().WithAll<PathFinished>().ForEach((Entity e, in WorkTarget target, in Position position) =>
+        if (!m_sellPlantQuery.IsEmptyIgnoreFilter)
         {
-            // Sell plant
+            int startFarmerCount = m_farmers.CalculateEntityCount();
+            int startMoney = m_money;
+            var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+            var removeJobTypes = m_removeJobTypes;
+            var farmerArchetype = m_farmerArchetype;
 
-            // TODO: Get money and add new farmer / drone
-            m_money++;
-            if (farmerCount < maxFarmerCount && m_money >= 10)
+            m_money += m_sellPlantQuery.CalculateEntityCount();
+            int farmerBuyCount = Math.Min(m_money / 10, maxFarmerCount - startFarmerCount);
+            m_money -= farmerBuyCount * 10;
+
+            Entities.WithAll<WorkSellPlants, CarryingPlant, WorkTarget>().WithAll<PathFinished>().WithStoreEntityQueryInField(ref m_sellPlantQuery).ForEach((Entity e, int entityInQueryIndex, ref RandomState rng, in WorkTarget target, in Position position) =>
             {
-                m_money -= 10;
+                // Sell plant
+                int money = startMoney + entityInQueryIndex + 1;
+                int farmerCount = startFarmerCount + money / 10;
+                if (money % 10 == 0 && farmerCount <= maxFarmerCount)
+                {
+                    var pos = position.Value;
+                    var farmer = cmdBuffer.CreateEntity(entityInQueryIndex, farmerArchetype);
+                    //cmdBuffer.SetName(farmer, $"Farmer {farmerCount}");
+                    cmdBuffer.SetComponent(entityInQueryIndex, farmer, new Position { Value = pos });
+                    cmdBuffer.SetComponent(entityInQueryIndex, farmer, new SmoothPosition { Value = pos });
+                }
 
-                var pos = position.Value;
-                var farmer = cmdBuffer.CreateEntity(m_farmerArchetype);
-                //cmdBuffer.SetName(farmer, $"Farmer {farmerCount}");
-                cmdBuffer.SetComponent(farmer, new Position { Value = pos });
-                cmdBuffer.SetComponent(farmer, new SmoothPosition { Value = pos });
-                farmerCount++;
-            }
+                // Remove target
+                cmdBuffer.RemoveComponent(entityInQueryIndex, e, removeJobTypes);
 
-            // Remove target
-            cmdBuffer.RemoveComponent(e, typeof(WorkTarget));
-            cmdBuffer.RemoveComponent(e, typeof(CarryingPlant));
+                // Choose other work
+                if (rng.Rng.NextFloat() < 0.1f)
+                {
+                    cmdBuffer.RemoveComponent<WorkSellPlants>(entityInQueryIndex, e);
+                }
+            }).ScheduleParallel();
 
-            // Choose other work
-            if (Random.value < 0.1f)
-            {
-                cmdBuffer.RemoveComponent(e, typeof(WorkSellPlants));
-            }
-        }).Run();
-
-        m_cmdBufferSystem.AddJobHandleForProducer(Dependency);
+            m_cmdSystem.AddJobHandleForProducer(Dependency);
+        }
     }
 }
