@@ -11,7 +11,7 @@ using Random = Unity.Mathematics.Random;
 [UpdateInGroup(typeof(FarmGroup))]
 public class FarmerDecision : SystemBase
 {
-    public static int MaxJob = 4;
+    public static uint JobMask;
 
     static readonly ComponentTypes m_failRemoveComponents = new ComponentTypes(new ComponentType[] { typeof(PathFailed), typeof(PathData), typeof(WorkClearRocks), typeof(WorkPlantSeeds), typeof(WorkSellPlants), typeof(WorkTillGround) });
 
@@ -22,6 +22,7 @@ public class FarmerDecision : SystemBase
 
     protected override void OnCreate()
     {
+        JobMask = uint.MaxValue;
         base.OnCreate();
         m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
         m_failedQuery = Query.WithAll<FarmerTag, PathFailed>();
@@ -47,28 +48,27 @@ public class FarmerDecision : SystemBase
         if (!m_selectJobQuery.IsEmptyIgnoreFilter)
         {
             var cmdBuffer = m_cmdSystem.CreateCommandBuffer();
-            int maxJob = MaxJob;
+            uint mask = JobMask;
             Entities.WithAll<FarmerTag>().WithNone<WorkClearRocks, WorkPlantSeeds, WorkSellPlants>().WithNone<WorkTillGround>().WithStoreEntityQueryInField(ref m_selectJobQuery).ForEach((Entity e, ref RandomState rng) =>
             {
-                int rand = rng.Rng.NextInt(0, maxJob);
-                if (rand == 0)
-                {
-                    cmdBuffer.AddComponent<WorkClearRocks>(e);
-                }
-                else if (rand == 1)
-                {
-                    cmdBuffer.AddComponent<WorkTillGround>(e);
-                }
-                else if (rand == 2)
-                {
-                    cmdBuffer.AddComponent<WorkPlantSeeds>(e);
-                }
-                else if (rand == 3)
-                {
-                    cmdBuffer.AddComponent<WorkSellPlants>(e);
-                }
+                int rand = rng.Rng.NextInt(0, 4);
+                SetJob<WorkClearRocks>(cmdBuffer, e, 0, rand, mask);
+                SetJob<WorkTillGround>(cmdBuffer, e, 1, rand, mask);
+                SetJob<WorkPlantSeeds>(cmdBuffer, e, 2, rand, mask);
+                SetJob<WorkSellPlants>(cmdBuffer, e, 3, rand, mask);
             }).Schedule();
             m_cmdSystem.AddJobHandleForProducer(Dependency);
         }
+    }
+
+    static bool SetJob<T>(EntityCommandBuffer cmdBuffer, Entity e, int jobIndex, int jobSelection, uint jobMask)
+        where T : struct, IComponentData
+    {
+        if (jobSelection == jobIndex && ((1u << jobIndex) & jobMask) != 0)
+        {
+            cmdBuffer.AddComponent<T>(e);
+            return true;
+        }
+        return false;
     }
 }
