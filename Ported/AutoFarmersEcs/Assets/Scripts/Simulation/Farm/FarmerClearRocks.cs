@@ -28,6 +28,7 @@ public class FarmerClearRocks : SystemBase
         m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
 
         m_rocks = EntityManager.CreateEntityQuery(typeof(RockTag));
+        m_needsPath = Query.WithAll<FarmerTag, WorkClearRocks>().WithNone<FindPath, PathTarget, PathFailed>();
         m_pathFailed = Query.WithAll<FarmerTag, WorkClearRocks, PathFailed>();
     }
 
@@ -49,17 +50,7 @@ public class FarmerClearRocks : SystemBase
         }
 
         // Add FindPath component
-        if (!m_needsPath.IsEmptyIgnoreFilter)
-        {
-            var findPath = FindPath.Create<RockTag>();
-            var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
-            Entities.WithAll<FarmerTag, WorkClearRocks>().WithNone<FindPath, PathTarget, PathFailed>().WithStoreEntityQueryInField(ref m_needsPath).ForEach((Entity e, int entityInQueryIndex) =>
-            {
-                cmdBuffer.AddComponent(entityInQueryIndex, e, findPath);
-            }).ScheduleParallel();
-
-            m_cmdSystem.AddJobHandleForProducer(Dependency);
-        }
+        Dependency = m_cmdSystem.AddComponentJob(m_needsPath, FindPath.Create<RockTag>(), Dependency);
 
         // Reached target
         if (!m_targetReached.IsEmptyIgnoreFilter)
