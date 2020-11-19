@@ -59,6 +59,24 @@ public class HelpText : MonoBehaviour
         FarmerDecision.JobMask = enable ? uint.MaxValue : 0;
     }
 
+    public void SetMoney(int money)
+    {
+        World.All[0].GetExistingSystem<FarmerSellPlants>().Money = money;
+    }
+
+    public void KeepOneFarmer()
+    {
+        var world = World.All[0];
+        var farmerQuery = world.EntityManager.CreateEntityQuery(typeof(FarmerTag));
+        using (var farmers = farmerQuery.ToEntityArray(Unity.Collections.Allocator.Temp))
+        {
+            for (int i = 1; i < farmers.Length; i++)
+            {
+                world.EntityManager.DestroyEntity(farmers[i]);
+            }
+        }
+    }
+
     void UpdateValues()
     {
         for (int i = 0; i < m_toggles.Length; i++)
