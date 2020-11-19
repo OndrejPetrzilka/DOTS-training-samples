@@ -91,30 +91,31 @@ public class FarmerPlantSeeds : SystemBase
             var lookupDataArray = GetBufferFromEntity<LookupData>(true);
             var plantArchetype = m_plantArchetype;
             var planedComponentTypes = m_planedComponentTypes;
-            var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
-            Entities.WithReadOnly(lookupDataArray).WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithAll<PathFinished>().WithStoreEntityQueryInField(ref m_targetReached).ForEach((Entity e, int entityInQueryIndex, ref RandomState rng, in Position position) =>
+            var cmdBuffer = m_cmdSystem.CreateCommandBuffer();
+            Entities.WithReadOnly(lookupDataArray).WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithAll<PathFinished>().WithStoreEntityQueryInField(ref m_targetReached).ForEach((Entity e, ref RandomState rng, in Position position) =>
             {
                 // Plant seeds
                 int2 tile = (int2)math.floor(position.Value);
 
                 // Check there's no plant
-                if (lookupDataArray[lookup][tile.x + tile.y * mapSize.x].ComponentTypeIndex == -1)
+                // TODO: Check case when two farmers want to plant seeds on same position
+                if (lookupDataArray[lookup][tile.x + tile.y * mapSize.x].Data == default)
                 {
                     // Spawn plant
                     int seed = Mathf.FloorToInt(Mathf.PerlinNoise(tile.x / 10f, tile.y / 10f) * 10) + 317281687;
 
-                    var plant = cmdBuffer.CreateEntity(entityInQueryIndex, plantArchetype);
-                    cmdBuffer.SetComponent(entityInQueryIndex, plant, new PlantTag { Seed = 0, Growth = 0 });
-                    cmdBuffer.SetComponent(entityInQueryIndex, plant, new Position { Value = tile });
+                    var plant = cmdBuffer.CreateEntity(plantArchetype);
+                    cmdBuffer.SetComponent(plant, new PlantTag { Seed = seed, Growth = 0 });
+                    cmdBuffer.SetComponent(plant, new Position { Value = tile });
                 }
 
                 // Remove target
-                cmdBuffer.RemoveComponent(entityInQueryIndex, e, planedComponentTypes);
+                cmdBuffer.RemoveComponent(e, planedComponentTypes);
 
                 // Choose other work
                 if (rng.Rng.NextFloat() < 0.1f)
                 {
-                    cmdBuffer.RemoveComponent<WorkPlantSeeds>(entityInQueryIndex, e);
+                    cmdBuffer.RemoveComponent<WorkPlantSeeds>(e);
                 }
             }).Schedule();
 

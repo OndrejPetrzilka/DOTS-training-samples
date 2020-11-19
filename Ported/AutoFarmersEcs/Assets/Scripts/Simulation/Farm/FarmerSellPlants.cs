@@ -69,20 +69,22 @@ public class FarmerSellPlants : SystemBase
         // Reached grown plant
         if (!m_reachedPlantQuery.IsEmptyIgnoreFilter)
         {
-            var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
+            var cmdBuffer = m_cmdSystem.CreateCommandBuffer();
             var plantTag = GetComponentDataFromEntity<PlantTag>(true);
             var removeComponents = m_removeJobTypes;
 
-            Entities.WithReadOnly(plantTag).WithAll<FarmerTag, WorkSellPlants, PathFinished>().WithNone<CarryingPlant>().WithStoreEntityQueryInField(ref m_reachedPlantQuery).ForEach((Entity e, int entityInQueryIndex, in PathTarget target, in Position position) =>
+            // Single threaded, we don't want two farmers to collect same plant
+            Entities.WithReadOnly(plantTag).WithAll<FarmerTag, WorkSellPlants, PathFinished>().WithNone<CarryingPlant>().WithStoreEntityQueryInField(ref m_reachedPlantQuery).ForEach((Entity e, in PathTarget target, in Position position) =>
             {
                 // Carry plant
-                cmdBuffer.RemoveComponent(entityInQueryIndex, e, removeComponents);
+                // TODO: Handle case when two farmers want to collect same plant in same frame
+                cmdBuffer.RemoveComponent(e, removeComponents);
                 if (plantTag.HasComponent(target.Entity))
                 {
-                    cmdBuffer.AddComponent(entityInQueryIndex, e, new CarryingPlant { Seed = plantTag[target.Entity].Seed });
-                    cmdBuffer.DestroyEntity(entityInQueryIndex, target.Entity);
+                    cmdBuffer.AddComponent(e, new CarryingPlant { Seed = plantTag[target.Entity].Seed });
+                    cmdBuffer.DestroyEntity(target.Entity);
                 }
-            }).ScheduleParallel();
+            }).Schedule();
 
             m_cmdSystem.AddJobHandleForProducer(Dependency);
         }
