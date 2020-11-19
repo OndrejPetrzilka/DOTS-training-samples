@@ -31,6 +31,7 @@ public class FarmerSellPlants : SystemBase
     public int Money
     {
         get { return m_money; }
+        set { m_money = value; }
     }
 
     protected override void OnCreate()
