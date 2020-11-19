@@ -159,8 +159,8 @@ MonoBehaviour:
     x: 60
     y: 60
   StoreCount: 50
-  MaxRockCount: 2000
-  InitialFarmerCount: 100
+  MaxRockCount: 0
+  InitialFarmerCount: 1
   MaxFarmerCount: 300
   MaxDroneCount: 1500
   MovementSmooth: 0.003
