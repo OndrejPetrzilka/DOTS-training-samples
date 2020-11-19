@@ -152,13 +152,7 @@ public class LookupSystem : SystemBase
         element.AddedQuery = Query.WithAll(componentType).WithNone<LookupInternalData>();
         m_elements.Add(element);
 
-        var desc = new EntityQueryDesc
-        {
-            All = new ComponentType[] { typeof(LookupInternalData) },
-            None = m_elements.Select(s => s.ComponentType).ToArray(),
-        };
-
-        m_deletedQuery = EntityManager.CreateEntityQuery(desc);
+        m_deletedQuery = Query.WithAll<LookupInternalData>().WithNone(m_elements.Select(s => s.ComponentType).ToArray());
     }
 
     protected override void OnDestroy()
@@ -183,8 +177,8 @@ public class LookupSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        RemoveDeletedEntities();
         UpdateEntitiesWithChangedFilters();
+        RemoveDeletedEntities();
         AddNewEntities();
     }
 
@@ -269,7 +263,14 @@ public class LookupSystem : SystemBase
             {
                 int2 p = pos + new int2(x, y);
                 int index = p.x + p.y * mapWidth;
-                entityArray[index] = new LookupEntity { Entity = e };
+                ref var entityValue = ref entityArray.ElementAt(index).Entity;
+                if (entityValue != Entity.Null && e != Entity.Null)
+                {
+                    var currentTypeName = dataArray[index].ComponentType?.Name ?? "<null>";
+                    var newTypeName = data.ComponentType?.Name ?? "<null>";
+                    throw new InvalidOperationException($"Position {pos} already occupied by different entity {entityValue}, {currentTypeName}, {dataArray[index].ObjectFilters}, trying to overwrite with {e}, {newTypeName}, {data.ObjectFilters}");
+                }
+                entityValue = e;
                 dataArray[index] = data;
             }
         }
