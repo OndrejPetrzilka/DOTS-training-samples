@@ -132,7 +132,7 @@ public class LookupSystem : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
+        m_cmdSystem = World.GetOrCreateSystem<BeginFixedStepSimulationEntityCommandBufferSystem>();
 
         m_lookup = EntityManager.CreateEntity();
         EntityManager.SetName(m_lookup, "Lookup");
