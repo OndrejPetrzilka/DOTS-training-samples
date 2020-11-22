@@ -88,18 +88,19 @@ public class FarmerPlantSeeds : SystemBase
         if (!m_targetReached.IsEmptyIgnoreFilter)
         {
             var lookup = GetSingletonEntity<LookupData>();
-            var lookupDataArray = GetBufferFromEntity<LookupData>(true);
+            var lookupDataArray = GetBufferFromEntity<LookupEntity>(true);
             var plantArchetype = m_plantArchetype;
             var planedComponentTypes = m_planedComponentTypes;
             var cmdBuffer = m_cmdSystem.CreateCommandBuffer();
-            Entities.WithReadOnly(lookupDataArray).WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithAll<PathFinished>().WithStoreEntityQueryInField(ref m_targetReached).ForEach((Entity e, ref RandomState rng, in Position position) =>
+            NativeArray<LookupEntity> buffer = new NativeArray<LookupEntity>(lookupDataArray[lookup].AsNativeArray(), Allocator.TempJob);
+            Entities.WithDisposeOnCompletion(buffer).WithAll<FarmerTag, WorkPlantSeeds, HasSeedsTag>().WithAll<PathFinished>().WithStoreEntityQueryInField(ref m_targetReached).ForEach((Entity e, ref RandomState rng, in Position position) =>
             {
                 // Plant seeds
                 int2 tile = (int2)math.floor(position.Value);
+                int tileIndex = tile.x + tile.y * mapSize.x;
 
                 // Check there's no plant
-                // TODO: Check case when two farmers want to plant seeds on same position
-                if (lookupDataArray[lookup][tile.x + tile.y * mapSize.x].Data == default)
+                if (buffer[tileIndex].Entity == Entity.Null)
                 {
                     // Spawn plant
                     int seed = Mathf.FloorToInt(Mathf.PerlinNoise(tile.x / 10f, tile.y / 10f) * 10) + 317281687;
@@ -107,6 +108,8 @@ public class FarmerPlantSeeds : SystemBase
                     var plant = cmdBuffer.CreateEntity(plantArchetype);
                     cmdBuffer.SetComponent(plant, new PlantTag { Seed = seed, Growth = 0 });
                     cmdBuffer.SetComponent(plant, new Position { Value = tile });
+
+                    buffer[tileIndex] = new LookupEntity { Entity = plant };
                 }
 
                 // Remove target
