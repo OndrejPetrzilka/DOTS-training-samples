@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.UniversalDelegates;
@@ -31,6 +32,7 @@ public class LookupSystem : SystemBase
         public int ComponentTypeIndex;
     }
 
+    [BurstCompile]
     struct RemoveJob : IJobChunk
     {
         [ReadOnly]
@@ -61,11 +63,12 @@ public class LookupSystem : SystemBase
             {
                 var data = datas[i];
                 SetLookupData(lookupBuffer, lookupDataBuffer, Entity.Null, default, data.Position, data.Size, MapWidth);
-                Buffer.RemoveComponent(entities[i], typeof(LookupInternalData));
+                Buffer.RemoveComponent<LookupInternalData>(entities[i]);
             }
         }
     }
 
+    [BurstCompile]
     struct AddJob : IJobChunk
     {
         [ReadOnly]
@@ -266,8 +269,8 @@ public class LookupSystem : SystemBase
                 ref var entityValue = ref entityArray.ElementAt(index).Entity;
                 if (entityValue != Entity.Null && e != Entity.Null)
                 {
-                    var currentTypeName = dataArray[index].ComponentType?.Name ?? "<null>";
-                    var newTypeName = data.ComponentType?.Name ?? "<null>";
+                    var currentTypeName = dataArray[index].ComponentTypeIndex;
+                    var newTypeName = data.ComponentTypeIndex;
                     throw new InvalidOperationException($"Position {pos} already occupied by different entity {entityValue}, {currentTypeName}, {dataArray[index].ObjectFilters}, trying to overwrite with {e}, {newTypeName}, {data.ObjectFilters}");
                 }
                 entityValue = e;
