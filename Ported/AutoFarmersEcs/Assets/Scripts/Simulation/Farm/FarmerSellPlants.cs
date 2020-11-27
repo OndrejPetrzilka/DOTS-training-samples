@@ -12,44 +12,60 @@ using Random = UnityEngine.Random;
 [UpdateInGroup(typeof(FarmGroup))]
 public class FarmerSellPlants : SystemBase
 {
+    const int FarmerCost = 10;
+    const int DroneBatchCost = 50;
+    const int DroneBatchSize = 5;
+
     static readonly int m_storeIndex = TypeManager.GetTypeIndex<StoreTag>();
     static readonly int m_plantIndex = TypeManager.GetTypeIndex<PlantTag>();
     static readonly ComponentTypes m_removeJobTypes = new ComponentTypes(typeof(PathTarget), typeof(PathData), typeof(PathFinished), typeof(FindPath), typeof(CarryingPlant));
 
     EntityArchetype m_farmerArchetype;
+    EntityArchetype m_droneArchetype;
     EntityCommandBufferSystem m_cmdSystem;
 
-    int m_money;
+    int m_moneyForFarmers;
+    int m_moneyForDrones;
 
     EntityQuery m_farmers;
+    EntityQuery m_drones;
     EntityQuery m_pathFailed;
     private EntityQuery m_findPlantQuery;
     private EntityQuery m_reachedPlantQuery;
     private EntityQuery m_findStoreQuery;
     private EntityQuery m_sellPlantQuery;
 
-    public int Money
+    public int MoneyForFarmers
     {
-        get { return m_money; }
-        set { m_money = value; }
+        get { return m_moneyForFarmers; }
+        set { m_moneyForFarmers = value; }
+    }
+
+    public int MoneyForDrones
+    {
+        get { return m_moneyForDrones; }
+        set { m_moneyForDrones = value; }
     }
 
     protected override void OnCreate()
     {
         base.OnCreate();
         m_farmerArchetype = EntityManager.CreateArchetype(typeof(FarmerTag), typeof(Position), typeof(SmoothPosition), typeof(Offset));
+        m_droneArchetype = EntityManager.CreateArchetype(typeof(DroneTag), typeof(Position), typeof(SmoothPosition), typeof(Offset));
         m_cmdSystem = World.GetOrCreateSystem<EndFixedStepSimulationEntityCommandBufferSystem>();
 
         m_farmers = EntityManager.CreateEntityQuery(typeof(FarmerTag));
-        m_pathFailed = Query.WithAll<FarmerTag, WorkSellPlants, PathFailed>();
-        m_findPlantQuery = Query.WithAll<FarmerTag, WorkSellPlants>().WithNone<FindPath, PathTarget, PathFailed, PathFinished, CarryingPlant>();
-        m_findStoreQuery = Query.WithAll<FarmerTag, WorkSellPlants, CarryingPlant>().WithNone<FindPath, PathTarget, PathFailed, PathFinished>();
+        m_drones = EntityManager.CreateEntityQuery(typeof(DroneTag));
+        m_pathFailed = Query.WithAll<WorkSellPlants, PathFailed>();
+        m_findPlantQuery = Query.WithAll<WorkSellPlants>().WithNone<FindPath, PathTarget, PathFailed, PathFinished, CarryingPlant>();
+        m_findStoreQuery = Query.WithAll<WorkSellPlants, CarryingPlant>().WithNone<FindPath, PathTarget, PathFailed, PathFinished>();
     }
 
     protected override void OnUpdate()
     {
         var mapSize = Settings.MapSize;
         var maxFarmerCount = Settings.MaxFarmerCount;
+        var maxDroneBatchCount = Settings.MaxDroneCount / DroneBatchSize;
 
         var groundEntity = GetSingletonEntity<Ground>();
         var groundData = GetBufferFromEntity<Ground>(true);
@@ -74,7 +90,7 @@ public class FarmerSellPlants : SystemBase
             var removeComponents = m_removeJobTypes;
 
             // Single threaded, we don't want two farmers to collect same plant
-            Entities.WithReadOnly(plantTag).WithAll<FarmerTag, WorkSellPlants, PathFinished>().WithNone<CarryingPlant>().WithStoreEntityQueryInField(ref m_reachedPlantQuery).ForEach((Entity e, in PathTarget target, in Position position) =>
+            Entities.WithReadOnly(plantTag).WithAll<WorkSellPlants, PathFinished>().WithNone<CarryingPlant>().WithStoreEntityQueryInField(ref m_reachedPlantQuery).ForEach((Entity e, in PathTarget target, in Position position) =>
             {
                 // Carry plant
                 // TODO: Handle case when two farmers want to collect same plant in same frame
@@ -96,27 +112,50 @@ public class FarmerSellPlants : SystemBase
         if (!m_sellPlantQuery.IsEmptyIgnoreFilter)
         {
             int startFarmerCount = m_farmers.CalculateEntityCount();
-            int startMoney = m_money;
+            int startDroneBatchCount = m_drones.CalculateEntityCount() / DroneBatchSize;
+            int startFarmerMoney = m_moneyForFarmers;
+            int startDroneMoney = m_moneyForDrones;
             var cmdBuffer = m_cmdSystem.CreateCommandBuffer().AsParallelWriter();
             var removeJobTypes = m_removeJobTypes;
             var farmerArchetype = m_farmerArchetype;
+            var droneArchetype = m_droneArchetype;
 
-            m_money += m_sellPlantQuery.CalculateEntityCount();
-            int farmerBuyCount = Math.Min(m_money / 10, maxFarmerCount - startFarmerCount);
-            m_money -= farmerBuyCount * 10;
+            int earnMoney = m_sellPlantQuery.CalculateEntityCount();
+            m_moneyForFarmers += earnMoney;
+            m_moneyForDrones += earnMoney;
+
+            int farmerBuyCount = Math.Min(m_moneyForFarmers / FarmerCost, maxFarmerCount - startFarmerCount);
+            m_moneyForFarmers -= farmerBuyCount * FarmerCost;
+
+            int droneBatchBuyCount = Math.Min(m_moneyForDrones / DroneBatchCost, maxDroneBatchCount - startDroneBatchCount);
+            m_moneyForDrones -= droneBatchBuyCount * DroneBatchCost;
 
             Entities.WithAll<WorkSellPlants, CarryingPlant, PathFinished>().WithStoreEntityQueryInField(ref m_sellPlantQuery).ForEach((Entity e, int entityInQueryIndex, ref RandomState rng, in Position position) =>
             {
                 // Sell plant
-                int money = startMoney + entityInQueryIndex + 1;
-                int farmerCount = startFarmerCount + money / 10;
-                if (money % 10 == 0 && farmerCount <= maxFarmerCount)
+                int farmerMoney = startFarmerMoney + entityInQueryIndex + 1;
+                int farmerCount = startFarmerCount + farmerMoney / FarmerCost;
+                if (farmerMoney % FarmerCost == 0 && farmerCount <= maxFarmerCount)
                 {
                     var pos = position.Value;
                     var farmer = cmdBuffer.CreateEntity(entityInQueryIndex, farmerArchetype);
                     //cmdBuffer.SetName(farmer, $"Farmer {farmerCount}");
                     cmdBuffer.SetComponent(entityInQueryIndex, farmer, new Position { Value = pos });
                     cmdBuffer.SetComponent(entityInQueryIndex, farmer, new SmoothPosition { Value = pos });
+                }
+
+                int droneMoney = startDroneMoney + entityInQueryIndex + 1;
+                int droneBatchCount = startDroneBatchCount + droneMoney / DroneBatchCost;
+                if (droneMoney % DroneBatchCost == 0 && droneBatchCount <= maxDroneBatchCount)
+                {
+                    for (int i = 0; i < DroneBatchSize; i++)
+                    {
+                        var pos = position.Value;
+                        var drone = cmdBuffer.CreateEntity(entityInQueryIndex, droneArchetype);
+                        //cmdBuffer.SetName(farmer, $"Farmer {farmerCount}");
+                        cmdBuffer.SetComponent(entityInQueryIndex, drone, new Position { Value = pos });
+                        cmdBuffer.SetComponent(entityInQueryIndex, drone, new SmoothPosition { Value = pos });
+                    }
                 }
 
                 // Remove target
