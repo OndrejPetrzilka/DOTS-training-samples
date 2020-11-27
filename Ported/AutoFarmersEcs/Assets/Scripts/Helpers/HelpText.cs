@@ -45,7 +45,7 @@ public class HelpText : MonoBehaviour
         {
             timeScale = Time.timeScale;
             version = StatsSystem.Version;
-            Text.text = $"Time scale: {timeScale}\r\nFarmers: {StatsSystem.FarmerCount}\r\nRocks: {StatsSystem.RockCount}\r\nPlants: {StatsSystem.PlantCount}\r\nMoney: {StatsSystem.Money}";
+            Text.text = $"Time scale: {timeScale}\r\nFarmers: {StatsSystem.FarmerCount}\r\nDrones:{StatsSystem.DroneCount}\r\nRocks: {StatsSystem.RockCount}\r\nPlants: {StatsSystem.PlantCount}\r\nMoney farmers: {StatsSystem.MoneyForFarmers}\r\nMoney drones:{StatsSystem.MoneyForDrones}";
         }
         if (jobMask != FarmerDecision.JobMask)
         {
@@ -61,7 +61,7 @@ public class HelpText : MonoBehaviour
 
     public void SetMoney(int money)
     {
-        World.All[0].GetExistingSystem<FarmerSellPlants>().Money = money;
+        World.All[0].GetExistingSystem<FarmerSellPlants>().MoneyForFarmers = money;
     }
 
     public void KeepOneFarmer()
